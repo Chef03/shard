@@ -179,8 +179,7 @@ namespace Shard
 
             string ffolder = System.Environment.GetFolderPath(System.Environment.SpecialFolder.Fonts);
 
-            IntPtr font = loadFont(ffolder + Path.DirectorySeparatorChar +
-                                   "calibri.ttf", size);
+            IntPtr font = loadFont(ffolder + "\\calibri.ttf", size);
             SDL.SDL_Color col = new SDL.SDL_Color();
 
             col.r = (byte)r;

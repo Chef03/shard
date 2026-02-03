@@ -15,8 +15,7 @@ namespace Shard
         public AssetManager()
         {
             assets = new Dictionary<string,string>();
-            AssetPath = Bootstrap.getEnvironmentalVariable
-                ("assetpath").Replace("\\", Path.DirectorySeparatorChar.ToString());
+            AssetPath = Bootstrap.getEnvironmentalVariable ("assetpath");
         }
 
         public override void registerAssets() {
@@ -25,7 +24,7 @@ namespace Shard
         }
 
         public string getName (string path) {
-            string[] bits = path.Split (Path.DirectorySeparatorChar);
+            string[] bits = path.Split ("\\");
             
             return bits[bits.Length - 1];
         }

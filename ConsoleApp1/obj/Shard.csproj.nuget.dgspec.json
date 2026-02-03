@@ -1,30 +1,32 @@
 {
   "format": 1,
   "restore": {
-    "/Users/chef/Desktop/shard-main/ConsoleApp1/Shard.csproj": {}
+    "C:\\Users\\natas\\Downloads\\shard-main\\shard-main\\ConsoleApp1\\Shard.csproj": {}
   },
   "projects": {
-    "/Users/chef/Desktop/shard-main/ConsoleApp1/Shard.csproj": {
+    "C:\\Users\\natas\\Downloads\\shard-main\\shard-main\\ConsoleApp1\\Shard.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/chef/Desktop/shard-main/ConsoleApp1/Shard.csproj",
+        "projectUniqueName": "C:\\Users\\natas\\Downloads\\shard-main\\shard-main\\ConsoleApp1\\Shard.csproj",
         "projectName": "Shard",
-        "projectPath": "/Users/chef/Desktop/shard-main/ConsoleApp1/Shard.csproj",
-        "packagesPath": "/Users/chef/.nuget/packages/",
-        "outputPath": "/Users/chef/Desktop/shard-main/ConsoleApp1/obj/",
+        "projectPath": "C:\\Users\\natas\\Downloads\\shard-main\\shard-main\\ConsoleApp1\\Shard.csproj",
+        "packagesPath": "C:\\Users\\natas\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\natas\\Downloads\\shard-main\\shard-main\\ConsoleApp1\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/Users/chef/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\natas\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
-          "net8.0"
+          "net8.0-windows"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
-          "net8.0": {
-            "targetAlias": "net8.0",
+          "net8.0-windows7.0": {
+            "targetAlias": "net8.0-windows",
             "projectReferences": {}
           }
         },
@@ -32,11 +34,17 @@
           "warnAsError": [
             "NU1605"
           ]
-        }
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.100"
       },
       "frameworks": {
-        "net8.0": {
-          "targetAlias": "net8.0",
+        "net8.0-windows7.0": {
+          "targetAlias": "net8.0-windows",
           "dependencies": {
             "SDL2-CS": {
               "target": "Package",
@@ -63,7 +71,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.123/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.100/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

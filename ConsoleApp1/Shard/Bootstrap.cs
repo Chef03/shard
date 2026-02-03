@@ -62,9 +62,8 @@ namespace Shard
             string workDir = Environment.CurrentDirectory;
             baseDir = Directory.GetParent(workDir).Parent.Parent.Parent.FullName;
 
-            setupEnvironmentalVariables(baseDir + Path.DirectorySeparatorChar +
-                                        "envar.cfg");
-            setup(baseDir + Path.DirectorySeparatorChar + DEFAULT_CONFIG);
+            setupEnvironmentalVariables(baseDir + "\\" + "envar.cfg");
+            setup(baseDir + "\\" + DEFAULT_CONFIG);
 
         }
 

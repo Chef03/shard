@@ -6,7 +6,7 @@ namespace SpaceInvaders
 {
     class Spaceship : GameObject, InputListener, CollisionHandler
     {
-        bool left, right, down, up;
+        bool left, right;
         float fireCounter, fireDelay;
 
 
@@ -34,12 +34,10 @@ namespace SpaceInvaders
 
         public void fireBullet()
         {
-            /*
             if (fireCounter < fireDelay)
             {
                 return;
             }
-            */
 
             Bullet b = new Bullet();
 
@@ -72,15 +70,6 @@ namespace SpaceInvaders
                     left = true;
                 }
 
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_S)
-                {
-                     down = true;
-                }
-                
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_W)
-                {
-                    up = true;
-                }
             }
             else if (eventType == "KeyUp")
             {
@@ -96,15 +85,7 @@ namespace SpaceInvaders
                     left = false;
                 }
 
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_S)
-                {
-                    down = false;
-                }
 
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_W)
-                {
-                    up = false;
-                }
             }
 
 
@@ -113,7 +94,7 @@ namespace SpaceInvaders
             {
                 if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_SPACE)
                 {
-                        fireBullet();
+                    fireBullet();
                 }
             }
         }
@@ -126,25 +107,13 @@ namespace SpaceInvaders
 
             if (left)
             {
-                this.Transform.translate(-10 * amount, 0);
+                this.Transform.translate(-1 * amount, 0);
             }
 
             if (right)
             {
-                this.Transform.translate(10 * amount, 0);
+                this.Transform.translate(1 * amount, 0);
             }
-
-            if (up)
-            {
-                this.Transform.translate(0, -10 * amount);
-            }
-
-            if (down)
-            {
-                this.Transform.translate(0, 10 * amount);
-            }
-            
-            fireBullet();
 
             Bootstrap.getDisplay().addToDraw(this);
         }

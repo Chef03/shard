@@ -2,19 +2,19 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <Platforms>AnyCPU;</Platforms>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x64</PlatformTarget>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x64</PlatformTarget>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
 
@@ -29,7 +29,7 @@
 	  <EmbeddedResource Remove="SDL2\**" />
 	  <None Remove="SDL2\**" />
 	</ItemGroup>
-<!--
+
   <ItemGroup>
     <COMReference Include="{215d64d2-031c-33c7-96e3-61794cd1ee61}">
       <WrapperTool>tlbimp</WrapperTool>
@@ -38,7 +38,6 @@
       <Guid>215d64d2-031c-33c7-96e3-61794cd1ee61</Guid>
     </COMReference>
   </ItemGroup>
--->
 
 	<ItemGroup>
 		<PackageReference Include="Sayers.SDL2.Core" Version="1.0.11" />
