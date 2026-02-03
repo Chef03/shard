@@ -1,5 +1,5 @@
-﻿using SDL2;
-
+﻿using SDL;
+using static SDL.SDL3;
 using Shard;
 
 namespace GameBreakout
@@ -45,12 +45,12 @@ namespace GameBreakout
 
             if (eventType == "KeyDown")
             {
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_D)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_D)
                 {
                     right = true;
                 }
 
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_A)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_A)
                 {
                     left = true;
                 }
@@ -58,12 +58,12 @@ namespace GameBreakout
             }
             else if (eventType == "KeyUp")
             {
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_D)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_D)
                 {
                     right = false;
                 }
 
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_A)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_A)
                 {
                     left = false;
                 }

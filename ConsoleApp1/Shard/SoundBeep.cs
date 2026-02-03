@@ -6,40 +6,64 @@
 *   
 */
 
-using SDL2;
+using SDL;
+using static SDL.SDL3;
 using System;
+using System.Runtime.InteropServices;
 
 namespace Shard
 {
-    public class SoundSDL : Sound
+    public unsafe class SoundSDL : Sound
     {
 
 
         public override void playSound(string file)
         {
-            SDL.SDL_AudioSpec have, want;
-            uint length, dev;
-            IntPtr buffer;
+            SDL_AudioSpec spec;
+            byte* audioData;
+            uint audioLen;
 
-            
             file = Bootstrap.getAssetManager().getAssetPath(file);
 
-
-            SDL.SDL_LoadWAV(file, out have, out buffer, out length);
-
-            dev = SDL.SDL_OpenAudioDevice(IntPtr.Zero, 0, ref have, out want, 0);
-
-            if (SDL.SDL_GetQueuedAudioSize(dev) >= 15)
+            // Load WAV file - SDL3 API
+            fixed (byte* pathPtr = System.Text.Encoding.UTF8.GetBytes(file + "\0"))
             {
-                SDL.SDL_CloseAudioDevice(dev);
-                dev = SDL.SDL_OpenAudioDevice(IntPtr.Zero, 0, ref have, out want, 0);
+                if (!SDL_LoadWAV(pathPtr, &spec, &audioData, &audioLen))
+                {
+                    Debug.getInstance().log("Failed to load WAV: " + SDL_GetError());
+                    return;
+                }
             }
 
-            int success = SDL.SDL_QueueAudio(dev, buffer, length);
-            SDL.SDL_PauseAudioDevice(dev, 0);
+            // Create audio stream for playback
+            SDL_AudioStream* stream = SDL_OpenAudioDeviceStream(
+                SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
+                &spec,
+                null,
+                (nint)0
+            );
 
-            SDL.SDL_FreeWAV(buffer);
+            if (stream == null)
+            {
+                Debug.getInstance().log("Failed to open audio stream: " + SDL_GetError());
+                SDL_free(audioData);
+                return;
+            }
 
+            // Put audio data into the stream
+            if (!SDL_PutAudioStreamData(stream, (nint)audioData, (int)audioLen))
+            {
+                Debug.getInstance().log("Failed to queue audio: " + SDL_GetError());
+            }
+
+            // Resume the stream to start playback
+            SDL_ResumeAudioStreamDevice(stream);
+
+            // Free the loaded audio data
+            SDL_free(audioData);
+
+            // Note: The stream will be cleaned up when playback completes
+            // For a more robust implementation, track streams and destroy them when done
         }
 
     }

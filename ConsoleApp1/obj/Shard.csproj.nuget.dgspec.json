@@ -38,13 +38,17 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "dependencies": {
-            "SDL2-CS": {
+            "ppy.SDL3-CS": {
               "target": "Package",
-              "version": "[2.0.0, )"
+              "version": "[2025.1205.0, )"
             },
-            "Sayers.SDL2.Core": {
+            "ppy.SDL3_image-CS": {
               "target": "Package",
-              "version": "[1.0.11, )"
+              "version": "[2025.625.0, )"
+            },
+            "ppy.SDL3_ttf-CS": {
+              "target": "Package",
+              "version": "[2025.1205.0, )"
             }
           },
           "imports": [

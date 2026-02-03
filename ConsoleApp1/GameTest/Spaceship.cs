@@ -1,4 +1,5 @@
-﻿using SDL2;
+﻿using SDL;
+using static SDL.SDL3;
 using Shard;
 using System.Drawing;
 
@@ -65,22 +66,22 @@ namespace GameTest
 
             if (eventType == "KeyDown")
             {
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_W)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_W)
                 {
                     up = true;
                 }
 
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_S)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_S)
                 {
                     down = true;
                 }
 
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_D)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_D)
                 {
                     turnRight = true;
                 }
 
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_A)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_A)
                 {
                     turnLeft = true;
                 }
@@ -88,22 +89,22 @@ namespace GameTest
             }
             else if (eventType == "KeyUp")
             {
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_W)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_W)
                 {
                     up = false;
                 }
 
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_S)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_S)
                 {
                     down = false;
                 }
 
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_D)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_D)
                 {
                     turnRight = false;
                 }
 
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_A)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_A)
                 {
                     turnLeft = false;
                 }
@@ -115,7 +116,7 @@ namespace GameTest
 
             if (eventType == "KeyUp")
             {
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_SPACE)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_SPACE)
                 {
                     fireBullet();
                 }

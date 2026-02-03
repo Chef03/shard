@@ -2,75 +2,338 @@
   "version": 3,
   "targets": {
     "net8.0": {
-      "Sayers.SDL2.Core/1.0.11": {
+      "ppy.SDL3-CS/2025.1205.0": {
         "type": "package",
         "compile": {
-          "lib/net6.0/Sayers.SDL2.Core.dll": {}
+          "lib/net8.0/SDL3-CS.dll": {
+            "related": ".xml"
+          }
         },
         "runtime": {
-          "lib/net6.0/Sayers.SDL2.Core.dll": {}
+          "lib/net8.0/SDL3-CS.dll": {
+            "related": ".xml"
+          }
         },
-        "build": {
-          "build/Sayers.SDL2.Core.targets": {}
+        "runtimeTargets": {
+          "runtimes/android-arm/native/libSDL3.so": {
+            "assetType": "native",
+            "rid": "android-arm"
+          },
+          "runtimes/android-arm64/native/libSDL3.so": {
+            "assetType": "native",
+            "rid": "android-arm64"
+          },
+          "runtimes/android-x64/native/libSDL3.so": {
+            "assetType": "native",
+            "rid": "android-x64"
+          },
+          "runtimes/android-x86/native/libSDL3.so": {
+            "assetType": "native",
+            "rid": "android-x86"
+          },
+          "runtimes/ios/native/SDL3.xcframework/Info.plist": {
+            "assetType": "native",
+            "rid": "ios"
+          },
+          "runtimes/ios/native/SDL3.xcframework/ios-arm64/SDL3.framework/Info.plist": {
+            "assetType": "native",
+            "rid": "ios"
+          },
+          "runtimes/ios/native/SDL3.xcframework/ios-arm64/SDL3.framework/SDL3": {
+            "assetType": "native",
+            "rid": "ios"
+          },
+          "runtimes/ios/native/SDL3.xcframework/ios-arm64_x86_64-simulator/SDL3.framework/Info.plist": {
+            "assetType": "native",
+            "rid": "ios"
+          },
+          "runtimes/ios/native/SDL3.xcframework/ios-arm64_x86_64-simulator/SDL3.framework/SDL3": {
+            "assetType": "native",
+            "rid": "ios"
+          },
+          "runtimes/linux-arm/native/libSDL3.so": {
+            "assetType": "native",
+            "rid": "linux-arm"
+          },
+          "runtimes/linux-arm64/native/libSDL3.so": {
+            "assetType": "native",
+            "rid": "linux-arm64"
+          },
+          "runtimes/linux-x64/native/libSDL3.so": {
+            "assetType": "native",
+            "rid": "linux-x64"
+          },
+          "runtimes/linux-x86/native/libSDL3.so": {
+            "assetType": "native",
+            "rid": "linux-x86"
+          },
+          "runtimes/osx-arm64/native/libSDL3.dylib": {
+            "assetType": "native",
+            "rid": "osx-arm64"
+          },
+          "runtimes/osx-x64/native/libSDL3.dylib": {
+            "assetType": "native",
+            "rid": "osx-x64"
+          },
+          "runtimes/win-arm64/native/SDL3.dll": {
+            "assetType": "native",
+            "rid": "win-arm64"
+          },
+          "runtimes/win-x64/native/SDL3.dll": {
+            "assetType": "native",
+            "rid": "win-x64"
+          },
+          "runtimes/win-x86/native/SDL3.dll": {
+            "assetType": "native",
+            "rid": "win-x86"
+          }
         }
       },
-      "SDL2-CS/2.0.0": {
-        "type": "package"
+      "ppy.SDL3_image-CS/2025.625.0": {
+        "type": "package",
+        "dependencies": {
+          "ppy.SDL3-CS": "2025.625.0"
+        },
+        "compile": {
+          "lib/net8.0/SDL3_image-CS.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/SDL3_image-CS.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtimeTargets": {
+          "runtimes/linux-arm/native/libSDL3_image.so": {
+            "assetType": "native",
+            "rid": "linux-arm"
+          },
+          "runtimes/linux-arm64/native/libSDL3_image.so": {
+            "assetType": "native",
+            "rid": "linux-arm64"
+          },
+          "runtimes/linux-x64/native/libSDL3_image.so": {
+            "assetType": "native",
+            "rid": "linux-x64"
+          },
+          "runtimes/linux-x86/native/libSDL3_image.so": {
+            "assetType": "native",
+            "rid": "linux-x86"
+          },
+          "runtimes/osx-arm64/native/libSDL3_image.dylib": {
+            "assetType": "native",
+            "rid": "osx-arm64"
+          },
+          "runtimes/osx-x64/native/libSDL3_image.dylib": {
+            "assetType": "native",
+            "rid": "osx-x64"
+          },
+          "runtimes/win-arm64/native/SDL3_image.dll": {
+            "assetType": "native",
+            "rid": "win-arm64"
+          },
+          "runtimes/win-x64/native/SDL3_image.dll": {
+            "assetType": "native",
+            "rid": "win-x64"
+          },
+          "runtimes/win-x86/native/SDL3_image.dll": {
+            "assetType": "native",
+            "rid": "win-x86"
+          }
+        }
+      },
+      "ppy.SDL3_ttf-CS/2025.1205.0": {
+        "type": "package",
+        "dependencies": {
+          "ppy.SDL3-CS": "2025.1205.0"
+        },
+        "compile": {
+          "lib/net8.0/SDL3_ttf-CS.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/SDL3_ttf-CS.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtimeTargets": {
+          "runtimes/android-arm/native/libSDL3_ttf.so": {
+            "assetType": "native",
+            "rid": "android-arm"
+          },
+          "runtimes/android-arm64/native/libSDL3_ttf.so": {
+            "assetType": "native",
+            "rid": "android-arm64"
+          },
+          "runtimes/android-x64/native/libSDL3_ttf.so": {
+            "assetType": "native",
+            "rid": "android-x64"
+          },
+          "runtimes/android-x86/native/libSDL3_ttf.so": {
+            "assetType": "native",
+            "rid": "android-x86"
+          },
+          "runtimes/ios/native/SDL3_ttf.xcframework/Info.plist": {
+            "assetType": "native",
+            "rid": "ios"
+          },
+          "runtimes/ios/native/SDL3_ttf.xcframework/ios-arm64/SDL3_ttf.framework/Info.plist": {
+            "assetType": "native",
+            "rid": "ios"
+          },
+          "runtimes/ios/native/SDL3_ttf.xcframework/ios-arm64/SDL3_ttf.framework/SDL3_ttf": {
+            "assetType": "native",
+            "rid": "ios"
+          },
+          "runtimes/ios/native/SDL3_ttf.xcframework/ios-arm64_x86_64-simulator/SDL3_ttf.framework/Info.plist": {
+            "assetType": "native",
+            "rid": "ios"
+          },
+          "runtimes/ios/native/SDL3_ttf.xcframework/ios-arm64_x86_64-simulator/SDL3_ttf.framework/SDL3_ttf": {
+            "assetType": "native",
+            "rid": "ios"
+          },
+          "runtimes/linux-arm/native/libSDL3_ttf.so": {
+            "assetType": "native",
+            "rid": "linux-arm"
+          },
+          "runtimes/linux-arm64/native/libSDL3_ttf.so": {
+            "assetType": "native",
+            "rid": "linux-arm64"
+          },
+          "runtimes/linux-x64/native/libSDL3_ttf.so": {
+            "assetType": "native",
+            "rid": "linux-x64"
+          },
+          "runtimes/linux-x86/native/libSDL3_ttf.so": {
+            "assetType": "native",
+            "rid": "linux-x86"
+          },
+          "runtimes/osx-arm64/native/libSDL3_ttf.dylib": {
+            "assetType": "native",
+            "rid": "osx-arm64"
+          },
+          "runtimes/osx-x64/native/libSDL3_ttf.dylib": {
+            "assetType": "native",
+            "rid": "osx-x64"
+          },
+          "runtimes/win-arm64/native/SDL3_ttf.dll": {
+            "assetType": "native",
+            "rid": "win-arm64"
+          },
+          "runtimes/win-x64/native/SDL3_ttf.dll": {
+            "assetType": "native",
+            "rid": "win-x64"
+          },
+          "runtimes/win-x86/native/SDL3_ttf.dll": {
+            "assetType": "native",
+            "rid": "win-x86"
+          }
+        }
       }
     }
   },
   "libraries": {
-    "Sayers.SDL2.Core/1.0.11": {
-      "sha512": "K/guGaUyRdMhL2FLlUYbqJmKF3h2KtOV7l90NJfLOt/M64zLb4fkWlDGjXCZdHSZGPKsyOjps6FdsambXiLJQQ==",
+    "ppy.SDL3-CS/2025.1205.0": {
+      "sha512": "5KMnrH5NXzqxDmdm2UOeCYfCh/Djh0TJQeGRtWhRaeU7yOZyN1GoqgPWIm0bXUtk9DKk3Cl4u0dkTlhGjn/s8w==",
       "type": "package",
-      "path": "sayers.sdl2.core/1.0.11",
+      "path": "ppy.sdl3-cs/2025.1205.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
-        "build/Sayers.SDL2.Core.targets",
-        "build/win_x64/SDL2.dll",
-        "build/win_x64/SDL2_image.dll",
-        "build/win_x64/SDL2_mixer.dll",
-        "build/win_x64/SDL2_ttf.dll",
-        "build/win_x64/libFLAC-8.dll",
-        "build/win_x64/libjpeg-9.dll",
-        "build/win_x64/libmodplug-1.dll",
-        "build/win_x64/libmpg123-0.dll",
-        "build/win_x64/libogg-0.dll",
-        "build/win_x64/libopus-0.dll",
-        "build/win_x64/libopusfile-0.dll",
-        "build/win_x64/libpng16-16.dll",
-        "build/win_x64/libtiff-5.dll",
-        "build/win_x64/libvorbis-0.dll",
-        "build/win_x64/libwebp-7.dll",
-        "build/win_x64/zlib1.dll",
-        "lib/net6.0/Sayers.SDL2.Core.dll",
-        "sayers.sdl2.core.1.0.11.nupkg.sha512",
-        "sayers.sdl2.core.nuspec"
+        "README_nuget.md",
+        "lib/net8.0-android34.0/SDL3-CS.aar",
+        "lib/net8.0-android34.0/SDL3-CS.dll",
+        "lib/net8.0-android34.0/SDL3-CS.xml",
+        "lib/net8.0/SDL3-CS.dll",
+        "lib/net8.0/SDL3-CS.xml",
+        "ppy.sdl3-cs.2025.1205.0.nupkg.sha512",
+        "ppy.sdl3-cs.nuspec",
+        "runtimes/android-arm/native/libSDL3.so",
+        "runtimes/android-arm64/native/libSDL3.so",
+        "runtimes/android-x64/native/libSDL3.so",
+        "runtimes/android-x86/native/libSDL3.so",
+        "runtimes/ios/native/SDL3.xcframework/Info.plist",
+        "runtimes/ios/native/SDL3.xcframework/ios-arm64/SDL3.framework/Info.plist",
+        "runtimes/ios/native/SDL3.xcframework/ios-arm64/SDL3.framework/SDL3",
+        "runtimes/ios/native/SDL3.xcframework/ios-arm64_x86_64-simulator/SDL3.framework/Info.plist",
+        "runtimes/ios/native/SDL3.xcframework/ios-arm64_x86_64-simulator/SDL3.framework/SDL3",
+        "runtimes/linux-arm/native/libSDL3.so",
+        "runtimes/linux-arm64/native/libSDL3.so",
+        "runtimes/linux-x64/native/libSDL3.so",
+        "runtimes/linux-x86/native/libSDL3.so",
+        "runtimes/osx-arm64/native/libSDL3.dylib",
+        "runtimes/osx-x64/native/libSDL3.dylib",
+        "runtimes/win-arm64/native/SDL3.dll",
+        "runtimes/win-x64/native/SDL3.dll",
+        "runtimes/win-x86/native/SDL3.dll"
       ]
     },
-    "SDL2-CS/2.0.0": {
-      "sha512": "W7T4y+lMs7Wm/94dGggRxJYqxX5N6uuxuxw5ob/H34fnaoUwgoG0s+P7xzqsGXUc1cbCAjnShs21FdeFUnPlHA==",
+    "ppy.SDL3_image-CS/2025.625.0": {
+      "sha512": "sFeEVU+K9iqr/BVikbKzq/txGw3qXPh3uWs8lBJKR+oBA8FTOm3wxSnH8AXMKmCUPjucsLJYFiQB783ly28oUw==",
       "type": "package",
-      "path": "sdl2-cs/2.0.0",
+      "path": "ppy.sdl3_image-cs/2025.625.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
-        "LICENSE",
-        "content/net20/SDL2-CS/LPUtf8StrMarshaler.cs",
-        "content/net20/SDL2-CS/SDL2.cs",
-        "content/net20/SDL2-CS/SDL2_image.cs",
-        "content/net20/SDL2-CS/SDL2_mixer.cs",
-        "content/net20/SDL2-CS/SDL2_ttf.cs",
-        "sdl2-cs.2.0.0.nupkg.sha512",
-        "sdl2-cs.nuspec"
+        "README_nuget.md",
+        "lib/net8.0/SDL3_image-CS.dll",
+        "lib/net8.0/SDL3_image-CS.xml",
+        "ppy.sdl3_image-cs.2025.625.0.nupkg.sha512",
+        "ppy.sdl3_image-cs.nuspec",
+        "runtimes/linux-arm/native/libSDL3_image.so",
+        "runtimes/linux-arm64/native/libSDL3_image.so",
+        "runtimes/linux-x64/native/libSDL3_image.so",
+        "runtimes/linux-x86/native/libSDL3_image.so",
+        "runtimes/osx-arm64/native/libSDL3_image.dylib",
+        "runtimes/osx-x64/native/libSDL3_image.dylib",
+        "runtimes/win-arm64/native/SDL3_image.dll",
+        "runtimes/win-x64/native/SDL3_image.dll",
+        "runtimes/win-x86/native/SDL3_image.dll"
+      ]
+    },
+    "ppy.SDL3_ttf-CS/2025.1205.0": {
+      "sha512": "Ec3Del/4q7+XU6zNqyThAGvkLnGjGCKHY3Ivcj5LfjASlbNpsX8Qc3BUMm4ioKa8cLsZ9FzBTB84GswF2HS2TQ==",
+      "type": "package",
+      "path": "ppy.sdl3_ttf-cs/2025.1205.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "README_nuget.md",
+        "lib/net8.0-android34.0/SDL3_ttf-CS.dll",
+        "lib/net8.0-android34.0/SDL3_ttf-CS.xml",
+        "lib/net8.0/SDL3_ttf-CS.dll",
+        "lib/net8.0/SDL3_ttf-CS.xml",
+        "ppy.sdl3_ttf-cs.2025.1205.0.nupkg.sha512",
+        "ppy.sdl3_ttf-cs.nuspec",
+        "runtimes/android-arm/native/libSDL3_ttf.so",
+        "runtimes/android-arm64/native/libSDL3_ttf.so",
+        "runtimes/android-x64/native/libSDL3_ttf.so",
+        "runtimes/android-x86/native/libSDL3_ttf.so",
+        "runtimes/ios/native/SDL3_ttf.xcframework/Info.plist",
+        "runtimes/ios/native/SDL3_ttf.xcframework/ios-arm64/SDL3_ttf.framework/Info.plist",
+        "runtimes/ios/native/SDL3_ttf.xcframework/ios-arm64/SDL3_ttf.framework/SDL3_ttf",
+        "runtimes/ios/native/SDL3_ttf.xcframework/ios-arm64_x86_64-simulator/SDL3_ttf.framework/Info.plist",
+        "runtimes/ios/native/SDL3_ttf.xcframework/ios-arm64_x86_64-simulator/SDL3_ttf.framework/SDL3_ttf",
+        "runtimes/linux-arm/native/libSDL3_ttf.so",
+        "runtimes/linux-arm64/native/libSDL3_ttf.so",
+        "runtimes/linux-x64/native/libSDL3_ttf.so",
+        "runtimes/linux-x86/native/libSDL3_ttf.so",
+        "runtimes/osx-arm64/native/libSDL3_ttf.dylib",
+        "runtimes/osx-x64/native/libSDL3_ttf.dylib",
+        "runtimes/win-arm64/native/SDL3_ttf.dll",
+        "runtimes/win-x64/native/SDL3_ttf.dll",
+        "runtimes/win-x86/native/SDL3_ttf.dll"
       ]
     }
   },
   "projectFileDependencyGroups": {
     "net8.0": [
-      "SDL2-CS >= 2.0.0",
-      "Sayers.SDL2.Core >= 1.0.11"
+      "ppy.SDL3-CS >= 2025.1205.0",
+      "ppy.SDL3_image-CS >= 2025.625.0",
+      "ppy.SDL3_ttf-CS >= 2025.1205.0"
     ]
   },
   "packageFolders": {
@@ -110,13 +373,17 @@
       "net8.0": {
         "targetAlias": "net8.0",
         "dependencies": {
-          "SDL2-CS": {
+          "ppy.SDL3-CS": {
             "target": "Package",
-            "version": "[2.0.0, )"
+            "version": "[2025.1205.0, )"
           },
-          "Sayers.SDL2.Core": {
+          "ppy.SDL3_image-CS": {
             "target": "Package",
-            "version": "[1.0.11, )"
+            "version": "[2025.625.0, )"
+          },
+          "ppy.SDL3_ttf-CS": {
+            "target": "Package",
+            "version": "[2025.1205.0, )"
           }
         },
         "imports": [
