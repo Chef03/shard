@@ -10,7 +10,9 @@
 *   @author Kyle Agius (see Changelog for 1.3.0)
 */
 
-using SDL2;
+using SDL;
+using static SDL.SDL3;
+using static SDL.SDL3_ttf;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -18,18 +20,18 @@ using System.IO;
 namespace Shard
 {
 
-    // We'll be using SDL2 here to provide our underlying graphics system.
-    class TextDetails
+    // We'll be using SDL3 here to provide our underlying graphics system.
+    unsafe class TextDetails
     {
         string text;
         double x, y;
-        SDL.SDL_Color col;
+        SDL_Color col;
         int size;
-        IntPtr font;
-        IntPtr lblText;
+        TTF_Font* font;
+        SDL_Texture* lblText;
 
 
-        public TextDetails(string text, double x, double y, SDL.SDL_Color col, int spacing)
+        public TextDetails(string text, double x, double y, SDL_Color col, int spacing)
         {
             this.text = text;
             this.x = x;
@@ -53,7 +55,7 @@ namespace Shard
             get => y;
             set => y = value;
         }
-        public SDL.SDL_Color Col
+        public SDL_Color Col
         {
             get => col;
             set => col = value;
@@ -63,41 +65,42 @@ namespace Shard
             get => size;
             set => size = value;
         }
-        public IntPtr Font { get => font; set => font = value; }
-        public IntPtr LblText { get => lblText; set => lblText = value; }
+        public TTF_Font* Font { get => font; set => font = value; }
+        public SDL_Texture* LblText { get => lblText; set => lblText = value; }
     }
 
-    class DisplayText : Display
+    unsafe class DisplayText : Display
     {
-        protected IntPtr _window, _rend;
-        uint _format;
-        int _access;
+        protected SDL_Window* _window;
+        protected SDL_Renderer* _rend;
+        SDL_PixelFormat _format;
+        SDL_TextureAccess _access;
         private List<TextDetails> myTexts;
-        private Dictionary<string, IntPtr> fontLibrary;
+        private Dictionary<string, nint> fontLibrary;
         public override void clearDisplay()
         {
             foreach (TextDetails td in myTexts)
             {
-                SDL.SDL_DestroyTexture(td.LblText);
+                SDL_DestroyTexture(td.LblText);
             }
 
             myTexts.Clear();
-            SDL.SDL_SetRenderDrawColor(_rend, 0, 0, 0, 255);
-            SDL.SDL_RenderClear(_rend);
+            SDL_SetRenderDrawColor(_rend, 0, 0, 0, 255);
+            SDL_RenderClear(_rend);
 
         }
 
-        public IntPtr loadFont(string path, int size)
+        public TTF_Font* loadFont(string path, int size)
         {
             string key = path + "," + size;
 
             if (fontLibrary.ContainsKey(key))
             {
-                return fontLibrary[key];
+                return (TTF_Font*)fontLibrary[key];
             }
 
-            fontLibrary[key] = SDL_ttf.TTF_OpenFont(path, size);
-            return fontLibrary[key];
+            fontLibrary[key] = (nint)TTF_OpenFont(path, size);
+            return (TTF_Font*)fontLibrary[key];
         }
 
         private void update()
@@ -112,20 +115,23 @@ namespace Shard
             foreach (TextDetails td in myTexts)
             {
 
-                SDL.SDL_Rect sRect;
+                SDL_FRect sRect;
 
-                sRect.x = (int)td.X;
-                sRect.y = (int)td.Y;
+                sRect.x = (float)td.X;
+                sRect.y = (float)td.Y;
                 sRect.w = 0;
                 sRect.h = 0;
 
 
-                SDL_ttf.TTF_SizeText(td.Font, td.Text, out sRect.w, out sRect.h);
-                SDL.SDL_RenderCopy(_rend, td.LblText, IntPtr.Zero, ref sRect);
+                int w, h;
+                TTF_GetStringSize(td.Font, td.Text, 0, &w, &h);
+                sRect.w = w;
+                sRect.h = h;
+                SDL_RenderTexture(_rend, td.LblText, null, &sRect);
 
             }
 
-            SDL.SDL_RenderPresent(_rend);
+            SDL_RenderPresent(_rend);
 
         }
 
@@ -138,34 +144,30 @@ namespace Shard
 
         public override void setFullscreen()
         {
-            SDL.SDL_SetWindowFullscreen(_window,
-                 (uint)SDL.SDL_WindowFlags.SDL_WINDOW_FULLSCREEN_DESKTOP);
+            SDL_SetWindowFullscreen(_window, true);
         }
 
         public override void initialize()
         {
-            fontLibrary = new Dictionary<string, IntPtr>();
+            fontLibrary = new Dictionary<string, nint>();
 
             setSize(1280, 864);
 
-            SDL.SDL_Init(SDL.SDL_INIT_EVERYTHING);
-            SDL_ttf.TTF_Init();
-            _window = SDL.SDL_CreateWindow("Shard Game Engine",
-                SDL.SDL_WINDOWPOS_CENTERED,
-                SDL.SDL_WINDOWPOS_CENTERED,
-                getWidth(),
-                getHeight(),
+            SDL_Init(SDL_InitFlags.SDL_INIT_VIDEO | SDL_InitFlags.SDL_INIT_AUDIO);
+            TTF_Init();
+            _window = SDL_CreateWindow("Shard Game Engine",
+                (int)getWidth(),
+                (int)getHeight(),
                 0);
 
+            SDL_SetWindowPosition(_window, (int)SDL_WINDOWPOS_CENTERED, (int)SDL_WINDOWPOS_CENTERED);
 
-            _rend = SDL.SDL_CreateRenderer(_window,
-                -1,
-                SDL.SDL_RendererFlags.SDL_RENDERER_ACCELERATED);
+            _rend = SDL_CreateRenderer(_window, (byte*)null);
 
 
-            SDL.SDL_SetRenderDrawBlendMode(_rend, SDL.SDL_BlendMode.SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawBlendMode(_rend, SDL_BlendMode.SDL_BLENDMODE_BLEND);
 
-            SDL.SDL_SetRenderDrawColor(_rend, 0, 0, 0, 255);
+            SDL_SetRenderDrawColor(_rend, 0, 0, 0, 255);
 
 
             myTexts = new List<TextDetails>();
@@ -175,40 +177,40 @@ namespace Shard
 
         public override void showText(string text, double x, double y, int size, int r, int g, int b)
         {
-            int nx, ny, w = 0, h = 0;
+            int w = 0, h = 0;
 
             string ffolder = System.Environment.GetFolderPath(System.Environment.SpecialFolder.Fonts);
 
-            IntPtr font = loadFont(ffolder + Path.DirectorySeparatorChar +
+            TTF_Font* font = loadFont(ffolder + Path.DirectorySeparatorChar +
                                    "calibri.ttf", size);
-            SDL.SDL_Color col = new SDL.SDL_Color();
+            SDL_Color col = new SDL_Color();
 
             col.r = (byte)r;
             col.g = (byte)g;
             col.b = (byte)b;
             col.a = (byte)255;
 
-            if (font == IntPtr.Zero)
+            if (font == null)
             {
-                Debug.getInstance().log("TTF_OpenFont: " + SDL.SDL_GetError());
+                Debug.getInstance().log("TTF_OpenFont: " + SDL_GetError());
             }
 
             TextDetails td = new TextDetails(text, x, y, col, 12);
 
             td.Font = font;
 
-            IntPtr surf = SDL_ttf.TTF_RenderText_Solid(td.Font, td.Text, td.Col);
-            IntPtr lblText = SDL.SDL_CreateTextureFromSurface(_rend, surf);
-            SDL.SDL_FreeSurface(surf);
+            SDL_Surface* surf = TTF_RenderText_Solid(td.Font, td.Text, 0, td.Col);
+            SDL_Texture* lblText = SDL_CreateTextureFromSurface(_rend, surf);
+            SDL_DestroySurface(surf);
 
-            SDL.SDL_Rect sRect;
+            SDL_FRect sRect;
 
-            sRect.x = (int)x;
-            sRect.y = (int)y;
+            sRect.x = (float)x;
+            sRect.y = (float)y;
             sRect.w = w;
             sRect.h = h;
 
-            SDL.SDL_QueryTexture(lblText, out _format, out _access, out sRect.w, out sRect.h);
+            SDL_GetTextureSize(lblText, &sRect.w, &sRect.h);
 
             td.LblText = lblText;
 

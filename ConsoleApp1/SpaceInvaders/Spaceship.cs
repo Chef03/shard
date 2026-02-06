@@ -1,4 +1,5 @@
-﻿using SDL2;
+﻿using SDL;
+using static SDL.SDL3;
 using Shard;
 using System.Drawing;
 
@@ -62,22 +63,22 @@ namespace SpaceInvaders
             if (eventType == "KeyDown")
             {
 
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_D)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_D)
                 {
                     right = true;
                 }
 
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_A)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_A)
                 {
                     left = true;
                 }
 
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_S)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_S)
                 {
                      down = true;
                 }
                 
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_W)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_W)
                 {
                     up = true;
                 }
@@ -86,22 +87,22 @@ namespace SpaceInvaders
             {
 
 
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_D)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_D)
                 {
                     right = false;
                 }
 
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_A)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_A)
                 {
                     left = false;
                 }
 
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_S)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_S)
                 {
                     down = false;
                 }
 
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_W)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_W)
                 {
                     up = false;
                 }
@@ -111,7 +112,7 @@ namespace SpaceInvaders
 
             if (eventType == "KeyUp")
             {
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_SPACE)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_SPACE)
                 {
                         fireBullet();
                 }

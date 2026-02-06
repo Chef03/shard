@@ -1,6 +1,7 @@
 ﻿using Shard;
 using System.Collections.Generic;
-using SDL2;
+using SDL;
+using static SDL.SDL3;
 
 namespace ManicMiner
 {
@@ -40,20 +41,20 @@ namespace ManicMiner
             if (eventType == "KeyDown")
             {
 
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_D)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_D)
                 {
                     right = true;
                     spriteName = "right";
 
                 }
 
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_A)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_A)
                 {
                     left = true;
                     spriteName = "left";
                 }
 
-                if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_SPACE && canJump == true)
+                if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_SPACE && canJump == true)
                 {
                     jumpUp = true;
                     Debug.Log ("Jumping up");
@@ -64,13 +65,13 @@ namespace ManicMiner
             else if (eventType == "KeyUp")
                 {
 
-                    if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_D)
+                    if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_D)
                     {
                         right = false;
 
                     }
 
-                    if (inp.Key == (int)SDL.SDL_Scancode.SDL_SCANCODE_A)
+                    if (inp.Key == (int)SDL_Scancode.SDL_SCANCODE_A)
                     {
                         left = false;
                     }
