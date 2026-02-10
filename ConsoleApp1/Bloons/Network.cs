@@ -40,8 +40,6 @@ public class Network
             peer.Send(writer, DeliveryMethod.ReliableOrdered); // Send with reliability
         };
         
-        
-
         while (!Console.KeyAvailable)
         {
             server.PollEvents();
@@ -51,4 +49,37 @@ public class Network
         server.Stop();
     }
 
+    public static void client()
+    {
+        var listener = new EventBasedNetListener();
+        var client = new NetManager(listener);
+        client.Start();
+        client.Connect("127.0.0.1" /* host IP or name */, 9050 /* port */, "SomeConnectionKey" /* text key or NetDataWriter */);
+        listener.NetworkReceiveEvent += (fromPeer, dataReader, deliveryMethod, channel) =>
+        {
+            Console.WriteLine("We got: {0}", dataReader.GetString(100 /* max length of string */));
+            dataReader.Recycle();
+        };
+
+        listener.PeerConnectedEvent += (peer) =>
+        {
+            Console.WriteLine("Connected to server!, sending message...");
+            var server = peer;;
+            var writer = new NetDataWriter();
+
+
+            string test = "hello world";
+            writer.Put(test);
+            server.Send(writer, DeliveryMethod.ReliableOrdered);
+        };
+                
+        while (!Console.KeyAvailable)
+        {
+            client.PollEvents();
+            Thread.Sleep(15);
+        }
+
+        client.Stop();
+    }
+        
 }
