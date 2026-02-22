@@ -2,19 +2,27 @@ using LiteNetLib;
 using LiteNetLib.Utils;
 using SDL;
 using System;
+using System.Drawing;
+using System.IO;
 using System.Threading;
-
-using static Shard.Network;
-
+using static System.Net.Mime.MediaTypeNames;
 namespace Shard;
+
 
 class GameBloons : Game, InputListener
 {
     GameObject background;
     private int mouseX, mouseY;
     private bool mouseLeft, mouseRight;
+
+    private bool mouseMiddlePressed;
+    private bool prevMouseMiddlePressed;
+
     private Circle circle = new Circle();
     private bool hold = false;
+    private bool isFullscreen = false;
+    private int screenWidth = 1920, screenHeight = 1080;
+    System.Drawing.Image image;
 
 
 
@@ -26,12 +34,15 @@ class GameBloons : Game, InputListener
     public override void update()
     {
         Bootstrap.getDisplay().showText("FPS: " + Bootstrap.getFPS(), 10, 10, 12, 255, 255, 255);
-        Bootstrap.getDisplay().drawFilledCircle(circle);
+        
         Bootstrap.getDisplay().showText($"Mouse: {mouseX}, {mouseY}", 10, 30, 12, 255, 255, 255);
 
         string bstate = (mouseLeft ? "L" : "-")  + (mouseRight ? "R" : "-");
         Bootstrap.getDisplay().showText($"Buttons: {bstate}", 10, 50, 12, 255, 255, 255);
 
+        Bootstrap.getDisplay().addToDraw(background);
+
+        Bootstrap.getDisplay().drawFilledCircle(circle);
         // draw a small cursor at the mouse position
         Bootstrap.getDisplay().drawFilledCircle(mouseX, mouseY, 4, System.Drawing.Color.FromArgb(255, 255, 0));
 
@@ -53,14 +64,40 @@ class GameBloons : Game, InputListener
         {
             circle.R = 255;
         }
+        
+        //press and release the middle mouse button to toggle fullscreen
+        if (mouseMiddlePressed == false && prevMouseMiddlePressed == true)
+        {   
+                if (isFullscreen)
+                {
+                    Bootstrap.getDisplay().setWindowed(screenWidth, screenHeight);
+                    isFullscreen = false;
+                    background.Transform.Scaley = (float)Bootstrap.getDisplay().getHeight() / (float)image.Height;
+                    background.Transform.Scalex = background.Transform.Scaley;
 
+                    Debug.Log(background.Transform.Scalex.ToString());
+                    Debug.Log(background.Transform.Scaley.ToString());
+            }
+                else
+                {
+                    Bootstrap.getDisplay().setFullscreen();
+                    isFullscreen = true;
+                    background.Transform.Scaley = (float)Bootstrap.getDisplay().getHeight() / (float)image.Height;
+                    background.Transform.Scalex = background.Transform.Scaley;
 
+                    Debug.Log(background.Transform.Scalex.ToString());
+                    Debug.Log(background.Transform.Scaley.ToString());
+            }
+            
+        }
+        prevMouseMiddlePressed = mouseMiddlePressed;
         
     }
 
     public override void initialize()
     {
         Bootstrap.getInput().addListener(this);
+        Bootstrap.getDisplay().setSDLSize(screenWidth, screenHeight);
 
         Debug.Log("Bing!");
         //new Thread(startServer).Start();
@@ -71,6 +108,20 @@ class GameBloons : Game, InputListener
         circle.G = 255;
         circle.B = 255;
         circle.A = 255;
+
+        background = new GameObject();
+        background.Transform.SpritePath = getAssetManager().getAssetPath("Monkey_Lane_1390x1036.png");
+        image = System.Drawing.Image.FromStream(File.OpenRead(getAssetManager().getAssetPath("Monkey_Lane_1390x1036.png")), false, false);
+        //background.Transform.Scalex = (float)Bootstrap.getDisplay().getWidth() / (float)image.Width;
+        background.Transform.Scaley = (float)Bootstrap.getDisplay().getHeight() / (float)image.Height;
+        background.Transform.Scalex = background.Transform.Scaley;
+
+        Debug.Log(background.Transform.Scalex.ToString());
+        Debug.Log(background.Transform.Scaley.ToString());
+
+        // Only works on 1920x1080 displays for now
+
+
 
 
     }
@@ -102,16 +153,16 @@ class GameBloons : Game, InputListener
 
                 if (input.Button == 1) mouseLeft = true;
                 else if (input.Button == 3) mouseRight = true;
-
-
-
+                else if (input.Button == 2) mouseMiddlePressed = true;
                 break;
             case "MouseUp":
                 mouseX = input.X;
                 mouseY = input.Y;
                 if (input.Button == 1) mouseLeft = false;
                 else if (input.Button == 3) mouseRight = false;
+                else if (input.Button == 2) mouseMiddlePressed = false;
                 break;
+
         }
 
     }
