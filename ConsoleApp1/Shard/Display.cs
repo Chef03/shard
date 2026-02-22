@@ -64,6 +64,10 @@ namespace Shard
         {
         }
 
+        public virtual void setWindowed(int x, int y)
+        {
+        }
+
         public virtual void addToDraw(GameObject gob)
         {
         }
@@ -85,6 +89,13 @@ namespace Shard
         {
             _height = h;
             _width = w;
+            
+        }
+
+        public virtual void setSDLSize(int w, int h)
+        {
+            setSize(w, h);
+            setWindowed(w, h);
         }
 
         public abstract void initialize();
