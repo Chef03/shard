@@ -9,6 +9,8 @@
 *   
 */
 
+
+//TODOS: CAN add mouse scroll support
 namespace Shard
 {
     class InputEvent
@@ -43,6 +45,24 @@ namespace Shard
         {
             get => key;
             set => key = value;
+        }
+
+        // additions
+
+        public override string ToString()
+        {
+            if(button != 0)
+            {
+                return "InputEvent: " + classification + " at (" + x + ", " + y + ") with button " + button;
+            }
+            else if(key != 0)
+            {
+                return "InputEvent: " + classification + " with key " + key;
+            }
+            else
+            {
+                return "InputEvent: " + classification;
+            }
         }
     }
 }

@@ -38,6 +38,12 @@ namespace Shard
             drawFilledCircle(x, y, rad, col.R, col.G, col.B, col.A);
         }
 
+        //additions
+        public virtual void drawFilledCircle(Circle c)
+        {
+            drawFilledCircle(c.X, c.Y, c.Radius, c.R, c.G, c.B, c.A);
+        }
+
         public virtual void drawFilledCircle(int x, int y, int rad, int r, int g, int b, int a)
         {
             while (rad > 0)
@@ -87,5 +93,8 @@ namespace Shard
 
         public abstract void showText(string text, double x, double y, int size, int r, int g, int b);
         public abstract void showText(char[,] text, double x, double y, int size, int r, int g, int b);
+
+        // Additions:
+
     }
 }

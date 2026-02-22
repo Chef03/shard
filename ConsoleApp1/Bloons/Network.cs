@@ -12,6 +12,7 @@ public class Network
     {
         
     }
+    // Host a server and listen for clients, also send a message to clients when they connect
     public static void startServer()
     {
         var listener = new EventBasedNetListener();

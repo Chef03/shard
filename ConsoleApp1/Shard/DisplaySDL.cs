@@ -53,7 +53,7 @@ namespace Shard
         public int A { get => a; set => a = value; }
     }
 
-
+    // TODO: add draw rectangles
     unsafe class DisplaySDL : DisplayText
     {
         private List<Transform> _toDraw;
