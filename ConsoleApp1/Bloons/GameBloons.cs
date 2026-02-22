@@ -10,13 +10,14 @@ namespace Shard;
 
 class GameBloons : Game, InputListener
 {
+
     GameObject background;
     private int mouseX, mouseY;
     private bool mouseLeft, mouseRight;
     private Circle circle = new Circle();
     private bool hold = false;
 
-
+    private SoundManager soundManager;
 
     public override bool isRunning()
     {
@@ -54,8 +55,7 @@ class GameBloons : Game, InputListener
             circle.R = 255;
         }
 
-
-        
+        this.soundManager.drawVolumeSlider();
     }
 
     public override void initialize()
@@ -72,6 +72,11 @@ class GameBloons : Game, InputListener
         circle.B = 255;
         circle.A = 255;
 
+        this.soundManager = new SoundManager();
+         var volumePercent = Bootstrap.getSound().getVolumePercent();
+        Bootstrap.getSound().setVolumePercent(volumePercent);
+        
+        Bootstrap.getSound().playSound ("Sunshine Serenade.mp3");
 
     }
 
@@ -81,6 +86,15 @@ class GameBloons : Game, InputListener
         {
             return;
         }
+
+        if (eventType == "MouseMotion" || eventType == "MouseDown" || eventType == "MouseUp")
+        {
+            mouseX = input.X;
+            mouseY = input.Y;
+        }
+
+        this.soundManager.handleVolumeInput(input, eventType);
+
         //Debug.Log("eventType = " + eventType);
 
 
@@ -91,13 +105,9 @@ class GameBloons : Game, InputListener
         switch (eventType)
         {
             case "MouseMotion":
-                mouseX = input.X;
-                mouseY = input.Y;
                 Debug.Log("mouseX: " + mouseX + " mouseY: " + mouseY);
                 break;
             case "MouseDown":
-                mouseX = input.X;
-                mouseY = input.Y;
                 Debug.Log(input.ToString());
 
                 if (input.Button == 1) mouseLeft = true;
@@ -107,8 +117,6 @@ class GameBloons : Game, InputListener
 
                 break;
             case "MouseUp":
-                mouseX = input.X;
-                mouseY = input.Y;
                 if (input.Button == 1) mouseLeft = false;
                 else if (input.Button == 3) mouseRight = false;
                 break;
