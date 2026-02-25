@@ -2,10 +2,12 @@ using LiteNetLib;
 using LiteNetLib.Utils;
 using SDL;
 using System;
-using System.Drawing;
+//using System.Drawing;
 using System.IO;
 using System.Threading;
-using static System.Net.Mime.MediaTypeNames;
+//using static System.Net.Mime.MediaTypeNames;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats; // instead of System.Drawing, Crossplatform 2D graphics API
 namespace Shard;
 
 
@@ -22,7 +24,8 @@ class GameBloons : Game, InputListener
     private bool hold = false;
     private bool isFullscreen = false;
     private int screenWidth = 1920, screenHeight = 1080;
-    System.Drawing.Image image;
+    private Image image;
+    
 
 
 
@@ -111,8 +114,17 @@ class GameBloons : Game, InputListener
 
         background = new GameObject();
         background.Transform.SpritePath = getAssetManager().getAssetPath("Monkey_Lane_1390x1036.png");
-        image = System.Drawing.Image.FromStream(File.OpenRead(getAssetManager().getAssetPath("Monkey_Lane_1390x1036.png")), false, false);
-        //background.Transform.Scalex = (float)Bootstrap.getDisplay().getWidth() / (float)image.Width;
+        try
+        {
+            //image = System.Drawing.Image.FromStream(File.OpenRead(getAssetManager().getAssetPath("Monkey_Lane_1390x1036.png")), false, false);
+            using var stream = File.OpenRead(getAssetManager().getAssetPath("Monkey_Lane_1390x1036.png"));
+            image = Image.Load<Rgba32>(stream);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+        
         background.Transform.Scaley = (float)Bootstrap.getDisplay().getHeight() / (float)image.Height;
         background.Transform.Scalex = background.Transform.Scaley;
 
