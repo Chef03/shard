@@ -144,7 +144,21 @@ namespace Shard
 
         public override void setFullscreen()
         {
+            SDL_DisplayMode*  mode =  SDL_GetCurrentDisplayMode((SDL_DisplayID)1);
+            int width = mode->w;
+            int height = mode->h;
+            Debug.Log("Changing display mode to " + width + "x" + height);
+            SDL_SetWindowSize(_window, width, height);
             SDL_SetWindowFullscreen(_window, true);
+            setSize(width, height); //Make sure to update the size in the base class as well
+        }
+
+        public override void setWindowed(int x, int y)
+        {
+            Debug.Log("Changing display mode to " + x + "x" + y);
+            SDL_SetWindowFullscreen(_window, false);
+            SDL_SetWindowSize(_window, x, y);
+            setSize(x, y);
         }
 
         public override void initialize()
@@ -168,6 +182,7 @@ namespace Shard
             SDL_SetRenderDrawBlendMode(_rend, SDL_BlendMode.SDL_BLENDMODE_BLEND);
 
             SDL_SetRenderDrawColor(_rend, 0, 0, 0, 255);
+            SDL_SetWindowResizable(_window, true);
 
 
             myTexts = new List<TextDetails>();
