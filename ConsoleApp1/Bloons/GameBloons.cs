@@ -27,8 +27,8 @@ class GameBloons : Game, InputListener
     private int screenWidth = 1920, screenHeight = 1080;
     private Image image;
     
-
     private SoundManager soundManager;
+    private unsafe MIX_Track* track;
 
     public override bool isRunning()
     {
@@ -117,8 +117,14 @@ class GameBloons : Game, InputListener
         this.soundManager = new SoundManager();
         var volumePercent = Bootstrap.getSound().getVolumePercent();
         Bootstrap.getSound().setVolumePercent(volumePercent);
-        
-        Bootstrap.getSound().playSound ("Sunshine Serenade.mp3");
+
+        unsafe
+        {
+            var track = Bootstrap.getSound().playSound ("Sunshine Serenade.mp3", true, 10, 10);
+            Console.WriteLine("Track: " + track->ToString());
+            this.track = track;
+        }
+        //Bootstrap.getSound().playSound ("yeet.mp3", true, 5, 30);
         
         background = new GameObject();
         background.Transform.SpritePath = getAssetManager().getAssetPath("Monkey_Lane_1390x1036.png");
@@ -141,9 +147,6 @@ class GameBloons : Game, InputListener
 
         // Only works on 1920x1080 displays for now
 
-
-
-
     }
 
     public void handleInput(InputEvent input, string eventType)
@@ -157,6 +160,14 @@ class GameBloons : Game, InputListener
         {
             mouseX = input.X;
             mouseY = input.Y;
+        }
+
+        var width = (float) Bootstrap.getDisplay().getWidth();
+        var val = mouseX / width;
+        
+        unsafe
+        {
+            Bootstrap.getSound().pan(this.track ,200 - (val * 200),  val * 200);
         }
 
         this.soundManager.handleVolumeInput(input, eventType);
