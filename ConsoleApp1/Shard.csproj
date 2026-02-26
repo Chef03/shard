@@ -18,6 +18,7 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
 
+
 	<PropertyGroup>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<ApplicationIcon />
@@ -46,6 +47,10 @@
 		<PackageReference Include="ppy.SDL3_image-CS" Version="2025.625.0" />
 		<PackageReference Include="ppy.SDL3_mixer-CS" Version="2025.1205.0" />
 		<PackageReference Include="ppy.SDL3_ttf-CS" Version="2025.1205.0" />
+		<PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
+		<PackageReference Include="System.Drawing.Common" Version="10.0.3" />
 	</ItemGroup>
+
+
 
 </Project>

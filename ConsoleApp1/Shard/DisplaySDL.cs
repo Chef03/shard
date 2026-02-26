@@ -14,16 +14,21 @@
 */
 
 using SDL;
-using static SDL.SDL3;
-using static SDL.SDL3_image;
 using System;
 using System.Collections.Generic;
+using System.Drawing.Drawing2D;
+using System.Runtime.CompilerServices;
 using System.Threading;
+using static SDL.SDL3;
+using static SDL.SDL3_image;
 
 namespace Shard
-{
+{   
+    interface Shapes
+    {
+    }
 
-    class Line
+    class Line : Shapes
     {
         private int sx, sy;
         private int ex, ey;
@@ -38,8 +43,9 @@ namespace Shard
         public int B { get => b; set => b = value; }
         public int A { get => a; set => a = value; }
     }
+        
 
-    class Circle
+    class Circle : Shapes
     {
         int x, y, rad;
         private int r, g, b, a;
@@ -51,7 +57,7 @@ namespace Shard
         public int G { get => g; set => g = value; }
         public int B { get => b; set => b = value; }
         public int A { get => a; set => a = value; }
-    }
+        }
 
     // TODO: add draw rectangles
     unsafe class DisplaySDL : DisplayText
@@ -59,16 +65,20 @@ namespace Shard
         private List<Transform> _toDraw;
         private List<Line> _linesToDraw;
         private List<Circle> _circlesToDraw;
+        private List<Shapes> _shapesToDraw;
+
         private Dictionary<string, nint> spriteBuffer;
         public override void initialize()
         {
             spriteBuffer = new Dictionary<string, nint>();
 
+            
             base.initialize();
 
             _toDraw = new List<Transform>();
-            _linesToDraw = new List<Line>();
-            _circlesToDraw = new List<Circle>();
+            //_linesToDraw = new List<Line>();
+            //_circlesToDraw = new List<Circle>();
+            _shapesToDraw = new List<Shapes>();
 
 
         }
@@ -196,7 +206,8 @@ namespace Shard
             c.B = b;
             c.A = a;
 
-            _circlesToDraw.Add(c);
+            //_circlesToDraw.Add(c);
+            _shapesToDraw.Add(c);
         }
         public override void drawLine(int x, int y, int x2, int y2, int r, int g, int b, int a)
         {
@@ -211,55 +222,73 @@ namespace Shard
             l.B = b;
             l.A = a;
 
-            _linesToDraw.Add(l);
+            //_linesToDraw.Add(l);
+            _shapesToDraw.Add(l);
         }
 
-        public override void display()
-        {
-
-            SDL_FRect sRect;
-            SDL_FRect tRect;
-
-
-
-            foreach (Transform trans in _toDraw)
+            public override void display()
             {
 
-                if (trans.SpritePath == null)
+                SDL_FRect sRect;
+                SDL_FRect tRect;
+
+
+
+                foreach (Transform trans in _toDraw)
                 {
-                    continue;
+
+                    if (trans.SpritePath == null)
+                    {
+                        continue;
+                    }
+
+                    var sprite = loadTexture(trans);
+
+                    sRect.x = 0;
+                    sRect.y = 0;
+                    sRect.w = (float)(trans.Wid * trans.Scalex);
+                    sRect.h = (float)(trans.Ht * trans.Scaley);
+
+                    tRect.x = (float)trans.X;
+                    tRect.y = (float)trans.Y;
+                    tRect.w = sRect.w;
+                    tRect.h = sRect.h;
+
+                    SDL_RenderTextureRotated(_rend, sprite, &sRect, &tRect, trans.Rotz, null, SDL_FlipMode.SDL_FLIP_NONE);
                 }
 
-                var sprite = loadTexture(trans);
+                //foreach (Circle c in _circlesToDraw)
+                //{
+                //    SDL_SetRenderDrawColor(_rend, (byte)c.R, (byte)c.G, (byte)c.B, (byte)c.A);
+                //    renderCircle(c.X, c.Y, c.Radius);
+                //}
 
-                sRect.x = 0;
-                sRect.y = 0;
-                sRect.w = (float)(trans.Wid * trans.Scalex);
-                sRect.h = (float)(trans.Ht * trans.Scaley);
+                //foreach (Line l in _linesToDraw)
+                //{
+                //    SDL_SetRenderDrawColor(_rend, (byte)l.R, (byte)l.G, (byte)l.B, (byte)l.A);
+                //    SDL_RenderLine(_rend, l.Sx, l.Sy, l.Ex, l.Ey);
+                //}
 
-                tRect.x = (float)trans.X;
-                tRect.y = (float)trans.Y;
-                tRect.w = sRect.w;
-                tRect.h = sRect.h;
+                foreach (Shapes shape in _shapesToDraw)
+                {
+                    if (shape is Circle)
+                    {
+                        var c = (Circle)shape;
 
-                SDL_RenderTextureRotated(_rend, sprite, &sRect, &tRect, trans.Rotz, null, SDL_FlipMode.SDL_FLIP_NONE);
-            }
+                        SDL_SetRenderDrawColor(_rend, (byte)c.R, (byte)c.G, (byte)c.B, (byte)c.A);
+                        renderCircle(c.X, c.Y, c.Radius);
+                    }
+                    if (shape is Line)
+                    {
+                        var l = (Line)shape;
+                        SDL_SetRenderDrawColor(_rend, (byte)l.R, (byte)l.G, (byte)l.B, (byte)l.A);
+                        SDL_RenderLine(_rend, l.Sx, l.Sy, l.Ex, l.Ey);
+                    }
+                }
 
-            foreach (Circle c in _circlesToDraw)
-            {
-                SDL_SetRenderDrawColor(_rend, (byte)c.R, (byte)c.G, (byte)c.B, (byte)c.A);
-                renderCircle(c.X, c.Y, c.Radius);
-            }
-
-            foreach (Line l in _linesToDraw)
-            {
-                SDL_SetRenderDrawColor(_rend, (byte)l.R, (byte)l.G, (byte)l.B, (byte)l.A);
-                SDL_RenderLine(_rend, l.Sx, l.Sy, l.Ex, l.Ey);
-            }
-
-            // Show it off.
-            base.display();
-
+                // Show it off.
+                base.display();
+            
 
         }
 
@@ -267,8 +296,9 @@ namespace Shard
         {
 
             _toDraw.Clear();
-            _circlesToDraw.Clear();
-            _linesToDraw.Clear();
+            //_circlesToDraw.Clear();
+            //_linesToDraw.Clear();
+            _shapesToDraw.Clear();
 
             base.clearDisplay();
         }
