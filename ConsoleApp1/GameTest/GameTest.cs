@@ -85,5 +85,10 @@ namespace Shard
 
 
         }
+        
+        public void handleWindowEvent(WindowEvent windowEvent, string eventType)
+        {
+        
+        }
     }
 }

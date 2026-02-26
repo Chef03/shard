@@ -148,6 +148,7 @@ class GameBloons : Game, InputListener
 
     public void handleInput(InputEvent input, string eventType)
     {
+        Debug.Log(eventType);
         if (Bootstrap.getRunningGame().isRunning() == false)
         {
             return;
@@ -167,7 +168,6 @@ class GameBloons : Game, InputListener
         //left click = 1
         //right click = 2
         //middle click = 3
-
         switch (eventType)
         {
             case "MouseMotion":
@@ -179,7 +179,6 @@ class GameBloons : Game, InputListener
                 mouseX = input.X;
                 mouseY = input.Y;
                 Debug.Log(input.ToString());
-
                 if (input.Button == 1) mouseLeft = true;
                 else if (input.Button == 3) mouseRight = true;
                 else if (input.Button == 2) mouseMiddlePressed = true;
@@ -191,10 +190,34 @@ class GameBloons : Game, InputListener
                 else if (input.Button == 3) mouseRight = false;
                 else if (input.Button == 2) mouseMiddlePressed = false;
                 break;
+            case "WindowResize":
+                
+                break;
 
         }
 
     }
+
+    public void handleWindowEvent(WindowEvent windowEvent, string eventType)
+    {
+        Debug.Log(eventType);
+        if (Bootstrap.getRunningGame().isRunning() == false)
+        {
+            return;
+        }
+
+        //if (windowEvent.CloseRequested == true) System.Environment.Exit(0);
+        
+        switch (eventType)
+        {
+            case "WindowResize":
+                
+                break;
+            case "WindowCloseRequested":
+                System.Environment.Exit(0);
+                break;
+        }
+    }   
 
     
     

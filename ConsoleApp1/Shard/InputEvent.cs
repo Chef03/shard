@@ -13,7 +13,12 @@
 //TODOS: CAN add mouse scroll support
 namespace Shard
 {
-    class InputEvent
+    interface IEvents
+    {
+        abstract string toString();
+    }
+    
+    class InputEvent : IEvents
     {
         private int x;
         private int y;
@@ -49,7 +54,7 @@ namespace Shard
 
         // additions
 
-        public override string ToString()
+        public string toString()
         {
             if(button != 0)
             {
@@ -63,6 +68,23 @@ namespace Shard
             {
                 return "InputEvent: " + classification;
             }
+        }
+    }
+    
+    class WindowEvent : IEvents
+    {
+        private int width;
+        private int height;
+        private bool closeRequested;
+    
+    
+        public int Width { get => width; set => width = value; }
+        public int Height { get => height; set => height = value; }
+        public bool CloseRequested { get => closeRequested; set => closeRequested = value; }
+
+        public string toString()
+        {
+            return "str";
         }
     }
 }

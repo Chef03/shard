@@ -230,5 +230,10 @@ namespace ManicMiner
             }
 
         }
+        
+        public void handleWindowEvent(WindowEvent windowEvent, string eventType)
+        {
+        
+        }
     }
 }

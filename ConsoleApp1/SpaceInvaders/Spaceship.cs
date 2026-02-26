@@ -170,6 +170,11 @@ namespace SpaceInvaders
         {
             return "Spaceship: [" + Transform.X + ", " + Transform.Y + ", " + Transform.Wid + ", " + Transform.Ht + "]";
         }
+        
+        public void handleWindowEvent(WindowEvent windowEvent, string eventType)
+        {
+        
+        }
 
     }
 }

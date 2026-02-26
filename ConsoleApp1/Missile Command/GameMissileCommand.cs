@@ -150,6 +150,11 @@ namespace Shard
 
             return true;
         }
+        
+        public void handleWindowEvent(WindowEvent windowEvent, string eventType)
+        {
+        
+        }
 
 
         public void handleInput(InputEvent inp, string eventType)

@@ -74,6 +74,10 @@ namespace GameBreakout
 
 
         }
+        public void handleWindowEvent(WindowEvent windowEvent, string eventType)
+        {
+        
+        }
 
         public override void update()
         {

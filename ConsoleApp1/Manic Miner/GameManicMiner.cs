@@ -108,6 +108,11 @@ namespace Shard
             collect.Add(c);
 
         }
+        
+        public void handleWindowEvent(WindowEvent windowEvent, string eventType)
+        {
+        
+        }
 
 
         public void handleInput(InputEvent inp, string eventType)
