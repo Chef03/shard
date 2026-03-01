@@ -101,7 +101,7 @@ class GameBloons : Game, InputListener
         this.soundManager.drawVolumeSlider();
 
         renderBloons(monkeyLane);
-        renderPath(monkeyLane);
+        renderPathPoints(monkeyLane);
 
 
     }
@@ -282,7 +282,7 @@ class GameBloons : Game, InputListener
 
 
     //for testing
-    public void renderPath(Map map)
+    public void renderPathPoints(Map map)
     {
         foreach (LPoint point in map.Lane.getPath())
         {
