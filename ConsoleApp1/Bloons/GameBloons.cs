@@ -329,6 +329,10 @@ class GameBloons : Game, InputListener
             }
         }
     }
+    public override int getTargetFrameRate()
+    {
+        return 120; // cap at 120 fps
+    }
 
 
 }
