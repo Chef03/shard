@@ -41,6 +41,8 @@ namespace Shard
 
         public void informListeners(IEvents e, string eventType)
         {
+
+            // determine the type of event and call the appropriate handler on the listeners
             string type = null;
             InputListener il;
             if (e is InputEvent)
@@ -60,7 +62,6 @@ namespace Shard
                     continue;
                 }
 
-                //handle different event types
                 switch (type)
                 {
                     case "InputEvent":

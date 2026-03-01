@@ -7,7 +7,9 @@ using System.IO;
 using System.Threading;
 //using static System.Net.Mime.MediaTypeNames;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats; // instead of System.Drawing, Crossplatform 2D graphics API
+using SixLabors.ImageSharp.PixelFormats;
+using Shard.Bloons;
+using System.Collections.Generic; // instead of System.Drawing, Crossplatform 2D graphics API
 namespace Shard;
 
 
@@ -17,16 +19,15 @@ class GameBloons : Game, InputListener
     GameObject background;
     private int mouseX, mouseY;
     private bool mouseLeft, mouseRight;
-
     private bool mouseMiddlePressed;
     private bool prevMouseMiddlePressed;
-
     private Circle circle = new Circle();
     private bool hold = false;
     private bool isFullscreen = false;
     private int screenWidth = 1920, screenHeight = 1080;
     private Image image;
-    
+    private Map monkeyLane;
+
 
     private SoundManager soundManager;
 
@@ -38,10 +39,10 @@ class GameBloons : Game, InputListener
     public override void update()
     {
         Bootstrap.getDisplay().showText("FPS: " + Bootstrap.getFPS(), 10, 10, 12, 255, 255, 255);
-        
+
         Bootstrap.getDisplay().showText($"Mouse: {mouseX}, {mouseY}", 10, 30, 12, 255, 255, 255);
 
-        string bstate = (mouseLeft ? "L" : "-")  + (mouseRight ? "R" : "-");
+        string bstate = (mouseLeft ? "L" : "-") + (mouseRight ? "R" : "-");
         Bootstrap.getDisplay().showText($"Buttons: {bstate}", 10, 50, 12, 255, 255, 255);
 
         Bootstrap.getDisplay().addToDraw(background);
@@ -68,34 +69,34 @@ class GameBloons : Game, InputListener
         {
             circle.R = 255;
         }
-        
+
         //press and release the middle mouse button to toggle fullscreen
         if (mouseMiddlePressed == false && prevMouseMiddlePressed == true)
-        {   
-                if (isFullscreen)
-                {
-                    Bootstrap.getDisplay().setWindowed(screenWidth, screenHeight);
-                    isFullscreen = false;
-                    background.Transform.Scaley = (float)Bootstrap.getDisplay().getHeight() / (float)image.Height;
-                    background.Transform.Scalex = background.Transform.Scaley;
+        {
+            if (isFullscreen)
+            {
+                Bootstrap.getDisplay().setWindowed(screenWidth, screenHeight);
+                isFullscreen = false;
+                background.Transform.Scaley = (float)Bootstrap.getDisplay().getHeight() / (float)image.Height;
+                background.Transform.Scalex = background.Transform.Scaley;
 
-                    Debug.Log(background.Transform.Scalex.ToString());
-                    Debug.Log(background.Transform.Scaley.ToString());
+                Debug.Log(background.Transform.Scalex.ToString());
+                Debug.Log(background.Transform.Scaley.ToString());
             }
-                else
-                {
-                    Bootstrap.getDisplay().setFullscreen();
-                    isFullscreen = true;
-                    background.Transform.Scaley = (float)Bootstrap.getDisplay().getHeight() / (float)image.Height;
-                    background.Transform.Scalex = background.Transform.Scaley;
+            else
+            {
+                Bootstrap.getDisplay().setFullscreen();
+                isFullscreen = true;
+                background.Transform.Scaley = (float)Bootstrap.getDisplay().getHeight() / (float)image.Height;
+                background.Transform.Scalex = background.Transform.Scaley;
 
-                    Debug.Log(background.Transform.Scalex.ToString());
-                    Debug.Log(background.Transform.Scaley.ToString());
+                Debug.Log(background.Transform.Scalex.ToString());
+                Debug.Log(background.Transform.Scaley.ToString());
             }
-            
+
         }
         prevMouseMiddlePressed = mouseMiddlePressed;
-        
+
         this.soundManager.drawVolumeSlider();
     }
 
@@ -117,14 +118,13 @@ class GameBloons : Game, InputListener
         this.soundManager = new SoundManager();
         var volumePercent = Bootstrap.getSound().getVolumePercent();
         Bootstrap.getSound().setVolumePercent(volumePercent);
-        
-        Bootstrap.getSound().playSound ("Sunshine Serenade.mp3");
-        
+
+        Bootstrap.getSound().playSound("Sunshine Serenade.mp3");
+
         background = new GameObject();
         background.Transform.SpritePath = getAssetManager().getAssetPath("Monkey_Lane_1390x1036.png");
         try
         {
-            //image = System.Drawing.Image.FromStream(File.OpenRead(getAssetManager().getAssetPath("Monkey_Lane_1390x1036.png")), false, false);
             using var stream = File.OpenRead(getAssetManager().getAssetPath("Monkey_Lane_1390x1036.png"));
             image = Image.Load<Rgba32>(stream);
         }
@@ -132,17 +132,23 @@ class GameBloons : Game, InputListener
         {
             Console.WriteLine(e);
         }
-        
+
         background.Transform.Scaley = (float)Bootstrap.getDisplay().getHeight() / (float)image.Height;
         background.Transform.Scalex = background.Transform.Scaley;
 
         Debug.Log(background.Transform.Scalex.ToString());
         Debug.Log(background.Transform.Scaley.ToString());
 
-        // Only works on 1920x1080 displays for now
+        // TODO: Only works on 1920x1080 displays for now
+        // Not sure why scaling does not match resolution on macbooks
 
+        //Initialize Menu
 
+        //initialze monkeys
+        //Monkey dartMonkey = new Monkey();
 
+        //Initialize map 1: Monkey lane
+        monkeyLane = initializeMonkeyLane();
 
     }
 
@@ -191,7 +197,7 @@ class GameBloons : Game, InputListener
                 else if (input.Button == 2) mouseMiddlePressed = false;
                 break;
             case "WindowResize":
-                
+
                 break;
 
         }
@@ -207,19 +213,62 @@ class GameBloons : Game, InputListener
         }
 
         //if (windowEvent.CloseRequested == true) System.Environment.Exit(0);
-        
+
         switch (eventType)
         {
             case "WindowResize":
-                
+
                 break;
             case "WindowCloseRequested":
                 System.Environment.Exit(0);
                 break;
         }
-    }   
+    }
 
-    
-    
+    private Map initializeMonkeyLane()
+    {
+        List<LPoint> path = new List<LPoint>()
+        {
+            new LPoint() { x = 0,    y = 635  },
+            new LPoint() { x = 345,  y = 622  },
+            new LPoint() { x = 361,  y = 475  },
+            new LPoint() { x = 588,  y = 453  },
+            new LPoint() { x = 600,  y = 1018 },
+            new LPoint() { x = 940,  y = 1015 },
+            new LPoint() { x = 936,  y = 319  },
+            new LPoint() { x = 352,  y = 288  },
+            new LPoint() { x = 356,  y = 141  },
+            new LPoint() { x = 1125, y = 146  },
+            new LPoint() { x = 1137, y = 286  },
+            new LPoint() { x = 1334, y = 307  },
+            new LPoint() { x = 1334, y = 473  },
+            new LPoint() { x = 1141, y = 499  },
+            new LPoint() { x = 1117, y = 785  },
+            new LPoint() { x = 354,  y = 821  },
+            new LPoint() { x = 354,  y = 1080 }
+        };
 
+        // Initialize lane
+        Lane lane = new Lane(path);
+
+        // Wave 1 - red bloons (layer 1, base speed, no camo, no regrow)
+        Map.Wave wave1 = new Map.Wave()
+        {
+            n = 1,
+            Bloons = new List<Bloon>()
+            {
+                new Bloon("red", 1, 1, false, false),
+                new Bloon("red", 1, 1, false, false),
+                new Bloon("red", 1, 1, false, false),
+                new Bloon("red", 1, 1, false, false),
+                new Bloon("red", 1, 1, false, false),
+            }
+        };
+
+        List<Map.Wave> waves = new List<Map.Wave>();
+        waves.Add(wave1);
+        // Initialize map
+        Map map = new Map(lane, waves);
+        return monkeyLane;
+    }
 }
