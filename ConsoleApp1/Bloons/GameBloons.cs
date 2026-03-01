@@ -1,15 +1,15 @@
 using LiteNetLib;
 using LiteNetLib.Utils;
 using SDL;
-using System;
-//using System.Drawing;
-using System.IO;
-using System.Threading;
+using Shard.Bloons;
 //using static System.Net.Mime.MediaTypeNames;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using Shard.Bloons;
+using System;
 using System.Collections.Generic; // instead of System.Drawing, Crossplatform 2D graphics API
+//using System.Drawing;
+using System.IO;
+using System.Threading;
 namespace Shard;
 
 
@@ -27,6 +27,7 @@ class GameBloons : Game, InputListener
     private int screenWidth = 1920, screenHeight = 1080;
     private Image image;
     private Map monkeyLane;
+    private double startTime = Bootstrap.getCurrentMillis();
 
 
     private SoundManager soundManager;
@@ -98,6 +99,11 @@ class GameBloons : Game, InputListener
         prevMouseMiddlePressed = mouseMiddlePressed;
 
         this.soundManager.drawVolumeSlider();
+
+        renderBloons(monkeyLane);
+        renderPath(monkeyLane);
+
+
     }
 
     public override void initialize()
@@ -232,7 +238,7 @@ class GameBloons : Game, InputListener
             new LPoint() { x = 0,    y = 635  },
             new LPoint() { x = 345,  y = 622  },
             new LPoint() { x = 361,  y = 475  },
-            new LPoint() { x = 588,  y = 453  },
+            new LPoint() { x = 588,  y = 479  },
             new LPoint() { x = 600,  y = 1018 },
             new LPoint() { x = 940,  y = 1015 },
             new LPoint() { x = 936,  y = 319  },
@@ -245,30 +251,84 @@ class GameBloons : Game, InputListener
             new LPoint() { x = 1141, y = 499  },
             new LPoint() { x = 1117, y = 785  },
             new LPoint() { x = 354,  y = 821  },
-            new LPoint() { x = 354,  y = 1080 }
+            new LPoint() { x = 347,  y = 1080 }
         };
 
         // Initialize lane
         Lane lane = new Lane(path);
+        int startX = lane.getPath()[0].x;
+        int startY = lane.getPath()[0].y;
 
         // Wave 1 - red bloons (layer 1, base speed, no camo, no regrow)
         Map.Wave wave1 = new Map.Wave()
         {
-            n = 1,
+            spawnIntervalMs = 1000, // 500ms between each bloon
             Bloons = new List<Bloon>()
-            {
-                new Bloon("red", 1, 1, false, false),
-                new Bloon("red", 1, 1, false, false),
-                new Bloon("red", 1, 1, false, false),
-                new Bloon("red", 1, 1, false, false),
-                new Bloon("red", 1, 1, false, false),
-            }
         };
+
+        for (int i = 1; i < 6; i++)
+        {
+            wave1.Bloons.Add(new Bloon(BloonColor.Red, 1, 0.5, false, false, startX, startY, spawnDelayMs: i * wave1.spawnIntervalMs));
+        }
 
         List<Map.Wave> waves = new List<Map.Wave>();
         waves.Add(wave1);
+        Debug.Log("Initialized Monkey Lane with " + lane.getPath().Count + " path points and " + waves.Count + " waves.");
+        Debug.Log("Wave 1 has " + wave1.Bloons.Count + " bloons.");
         // Initialize map
         Map map = new Map(lane, waves);
-        return monkeyLane;
+        return map;
     }
+
+
+    //for testing
+    public void renderPath(Map map)
+    {
+        foreach (LPoint point in map.Lane.getPath())
+        {
+            Bootstrap.getDisplay().drawFilledCircle(point.x, point.y, 5, System.Drawing.Color.FromArgb(255, 0, 255));
+        }
+    }
+    
+    public void renderBloons(Map map)
+    {
+
+        double deltaTime = Bootstrap.getDeltaTime() * 1000;
+        //Debug.Log("Delta time: " + deltaTime);
+        Display display = Bootstrap.getDisplay();
+        foreach (Map.Wave wave in map.Waves)
+        {
+            foreach (Bloon bloon in wave.Bloons)
+            {
+
+                bloon.updateBloon(map.Lane.getPath(), deltaTime);
+                //Debug.Log($"Rendering bloon at position ({bloon.getPosition().x}, {bloon.getPosition().y}) with color {bloon.getColor()}");
+
+                //if in screeen area
+                if (bloon.getActive() == true)
+                {
+                    switch (bloon.getColor())
+                    {
+                        case BloonColor.Red:
+                            display.drawFilledCircle(bloon.getPosition().x, bloon.getPosition().y, 30, System.Drawing.Color.FromArgb(255, 0, 0));
+                            break;
+                        case BloonColor.Blue:
+                            display.drawFilledCircle(bloon.getPosition().x, bloon.getPosition().y, 10, System.Drawing.Color.FromArgb(0, 0, 255));
+                            break;
+                        case BloonColor.Green:
+                            display.drawFilledCircle(bloon.getPosition().x, bloon.getPosition().y, 10, System.Drawing.Color.FromArgb(0, 255, 0));
+                            break;
+                        default:
+                            display.drawFilledCircle(bloon.getPosition().x, bloon.getPosition().y, 10, System.Drawing.Color.FromArgb(255, 255, 255));
+                            break;
+
+                    }
+                }
+
+
+            }
+        }
+    }
+
+
 }

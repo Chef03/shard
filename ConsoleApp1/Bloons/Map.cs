@@ -18,8 +18,8 @@ namespace Shard.Bloons
 
         internal struct Wave
         {
-            public int n { get; set; }
             public List<Bloon> Bloons { get; set; } // each wave has a list of bloons
+            public int spawnIntervalMs { get; set; } // time in milliseconds between each bloon spawn in this wave
         }
 
         public Lane Lane { get; set; }
@@ -41,41 +41,13 @@ namespace Shard.Bloons
         {
             this.path = path;
         }
+
+        public List<LPoint> getPath()
+        {
+            return this.path;
+        }
+
     }
 
-    internal class Bloon
-    {
-        private string color;
-        private int layer;
-        private double speed;
-        private bool camo;
-        private bool regrow;
-        private LPoint position;
-
-        private const double BASE_SPEED = 1;
-        private const double SPEED_INCREMENT = 0.5;
-
-        public Bloon(string color, int layer, int speed, bool camo, bool regrow)
-        {
-            this.color = color;
-            this.layer = layer;
-            this.speed = speed;
-            this.camo = camo;
-            this.regrow = regrow;
-        }
-
-        public void pop(int damage)
-        {
-
-            //update color, speed, camo, regrow based on new layer
-        }
-        public void moveTowardsPoint(LPoint point)
-        {
-            //Should be able to move in any direction straight towards the point, not just up/down/left/right
-
-        }
-
-
-
-    }
+    
 }
