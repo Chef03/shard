@@ -1,34 +1,28 @@
-using LiteNetLib;
-using LiteNetLib.Utils;
-using SDL;
 using Shard.Bloons;
-//using static System.Net.Mime.MediaTypeNames;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using System;
-using System.Collections.Generic; // instead of System.Drawing, Crossplatform 2D graphics API
-//using System.Drawing;
+using System.Collections.Generic;
 using System.IO;
-using System.Threading;
-namespace Shard;
 
+namespace Shard;
 
 class GameBloons : Game, InputListener
 {
-
-    GameObject background;
-    private int mouseX, mouseY;
-    private bool mouseLeft, mouseRight;
+    private GameObject background;
+    private int mouseX;
+    private int mouseY;
+    private bool mouseLeft;
+    private bool mouseRight;
     private bool mouseMiddlePressed;
     private bool prevMouseMiddlePressed;
-    private Circle circle = new Circle();
-    private bool hold = false;
     private bool isFullscreen = false;
-    private int screenWidth = 1920, screenHeight = 1080;
+    private readonly int screenWidth = 1920;
+    private readonly int screenHeight = 1080;
     private Image image;
     private Map monkeyLane;
-    private double startTime = Bootstrap.getCurrentMillis();
-
+    private Monkey placedTower;
+    private readonly List<Bloon> cachedBloons = new List<Bloon>();
 
     private SoundManager soundManager;
 
@@ -39,71 +33,36 @@ class GameBloons : Game, InputListener
 
     public override void update()
     {
-        Bootstrap.getDisplay().showText("FPS: " + Bootstrap.getFPS(), 10, 10, 12, 255, 255, 255);
-
-        Bootstrap.getDisplay().showText($"Mouse: {mouseX}, {mouseY}", 10, 30, 12, 255, 255, 255);
+        var display = Bootstrap.getDisplay();
+        display.showText("FPS: " + Bootstrap.getFPS(), 10, 10, 12, 255, 255, 255);
+        display.showText($"Mouse: {mouseX}, {mouseY}", 10, 30, 12, 255, 255, 255);
+        display.showText("Left Click: Place Tower", 10, 50, 12, 255, 255, 255);
 
         string bstate = (mouseLeft ? "L" : "-") + (mouseRight ? "R" : "-");
-        Bootstrap.getDisplay().showText($"Buttons: {bstate}", 10, 50, 12, 255, 255, 255);
+        display.showText($"Buttons: {bstate}", 10, 70, 12, 255, 255, 255);
 
-        Bootstrap.getDisplay().addToDraw(background);
+        display.addToDraw(background);
+        display.drawFilledCircle(mouseX, mouseY, 4, System.Drawing.Color.FromArgb(255, 255, 0));
 
-        Bootstrap.getDisplay().drawFilledCircle(circle);
-        // draw a small cursor at the mouse position
-        Bootstrap.getDisplay().drawFilledCircle(mouseX, mouseY, 4, System.Drawing.Color.FromArgb(255, 255, 0));
+        updateFullscreenState();
 
-        if (mouseLeft == true)
+        soundManager.drawVolumeSlider();
+
+        double deltaTimeMs = Bootstrap.getDeltaTime() * 1000;
+        updateBloons(monkeyLane, deltaTimeMs);
+
+        if (placedTower != null)
         {
-            if (mouseX >= circle.X - circle.Radius && mouseX <= circle.X + circle.Radius)
-            {
-                if (mouseY >= circle.Y - circle.Radius && mouseY <= circle.Y + circle.Radius) hold = true;
-            }
-        }
-        if (mouseLeft == false) hold = false;
-        if (hold)
-        {
-            circle.R = 100;
-            circle.X = mouseX;
-            circle.Y = mouseY;
-        }
-        else
-        {
-            circle.R = 255;
+            placedTower.update(cachedBloons, deltaTimeMs);
         }
 
-        //press and release the middle mouse button to toggle fullscreen
-        if (mouseMiddlePressed == false && prevMouseMiddlePressed == true)
-        {
-            if (isFullscreen)
-            {
-                Bootstrap.getDisplay().setWindowed(screenWidth, screenHeight);
-                isFullscreen = false;
-                background.Transform.Scaley = (float)Bootstrap.getDisplay().getHeight() / (float)image.Height;
-                background.Transform.Scalex = background.Transform.Scaley;
-
-                Debug.Log(background.Transform.Scalex.ToString());
-                Debug.Log(background.Transform.Scaley.ToString());
-            }
-            else
-            {
-                Bootstrap.getDisplay().setFullscreen();
-                isFullscreen = true;
-                background.Transform.Scaley = (float)Bootstrap.getDisplay().getHeight() / (float)image.Height;
-                background.Transform.Scalex = background.Transform.Scaley;
-
-                Debug.Log(background.Transform.Scalex.ToString());
-                Debug.Log(background.Transform.Scaley.ToString());
-            }
-
-        }
-        prevMouseMiddlePressed = mouseMiddlePressed;
-
-        this.soundManager.drawVolumeSlider();
-
-        renderBloons(monkeyLane);
+        renderBloons();
         renderPathPoints(monkeyLane);
 
-
+        if (placedTower != null)
+        {
+            placedTower.draw(display);
+        }
     }
 
     public override void initialize()
@@ -111,56 +70,27 @@ class GameBloons : Game, InputListener
         Bootstrap.getInput().addListener(this);
         Bootstrap.getDisplay().setSDLSize(screenWidth, screenHeight);
 
-        Debug.Log("Bing!");
-        //new Thread(startServer).Start();
-        circle.X = 300;
-        circle.Y = 300;
-        circle.Radius = 50;
-        circle.R = 255;
-        circle.G = 255;
-        circle.B = 255;
-        circle.A = 255;
-
-        this.soundManager = new SoundManager();
+        soundManager = new SoundManager();
         var volumePercent = Bootstrap.getSound().getVolumePercent();
         Bootstrap.getSound().setVolumePercent(volumePercent);
-
         Bootstrap.getSound().playSound("Sunshine Serenade.mp3");
 
         background = new GameObject();
         background.Transform.SpritePath = getAssetManager().getAssetPath("Monkey_Lane_1390x1036.png");
-        try
+
+        using (var stream = File.OpenRead(getAssetManager().getAssetPath("Monkey_Lane_1390x1036.png")))
         {
-            using var stream = File.OpenRead(getAssetManager().getAssetPath("Monkey_Lane_1390x1036.png"));
             image = Image.Load<Rgba32>(stream);
         }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-        }
 
-        background.Transform.Scaley = (float)Bootstrap.getDisplay().getHeight() / (float)image.Height;
-        background.Transform.Scalex = background.Transform.Scaley;
+        updateBackgroundScale();
 
-        Debug.Log(background.Transform.Scalex.ToString());
-        Debug.Log(background.Transform.Scaley.ToString());
-
-        // TODO: Only works on 1920x1080 displays for now
-        // Not sure why scaling does not match resolution on macbooks
-
-        //Initialize Menu
-
-        //initialze monkeys
-        //Monkey dartMonkey = new Monkey();
-
-        //Initialize map 1: Monkey lane
+        // Initialize map 1: Monkey lane
         monkeyLane = initializeMonkeyLane();
-
     }
 
     public void handleInput(InputEvent input, string eventType)
     {
-        Debug.Log(eventType);
         if (Bootstrap.getRunningGame().isRunning() == false)
         {
             return;
@@ -172,62 +102,139 @@ class GameBloons : Game, InputListener
             mouseY = input.Y;
         }
 
-        this.soundManager.handleVolumeInput(input, eventType);
+        soundManager.handleVolumeInput(input, eventType);
 
-        //Debug.Log("eventType = " + eventType);
-
-
-        //left click = 1
-        //right click = 2
-        //middle click = 3
+        // left click = 1
+        // right click = 3
+        // middle click = 2
         switch (eventType)
         {
             case "MouseMotion":
                 mouseX = input.X;
                 mouseY = input.Y;
-                Debug.Log("mouseX: " + mouseX + " mouseY: " + mouseY);
                 break;
             case "MouseDown":
                 mouseX = input.X;
                 mouseY = input.Y;
-                Debug.Log(input.ToString());
-                if (input.Button == 1) mouseLeft = true;
-                else if (input.Button == 3) mouseRight = true;
-                else if (input.Button == 2) mouseMiddlePressed = true;
+                if (input.Button == 1)
+                {
+                    mouseLeft = true;
+                    if (input.Y > 80)
+                    {
+                        placedTower = new Monkey(new LPoint() { x = input.X, y = input.Y });
+                    }
+                }
+                else if (input.Button == 3)
+                {
+                    mouseRight = true;
+                }
+                else if (input.Button == 2)
+                {
+                    mouseMiddlePressed = true;
+                }
                 break;
             case "MouseUp":
                 mouseX = input.X;
                 mouseY = input.Y;
-                if (input.Button == 1) mouseLeft = false;
-                else if (input.Button == 3) mouseRight = false;
-                else if (input.Button == 2) mouseMiddlePressed = false;
+                if (input.Button == 1)
+                {
+                    mouseLeft = false;
+                }
+                else if (input.Button == 3)
+                {
+                    mouseRight = false;
+                }
+                else if (input.Button == 2)
+                {
+                    mouseMiddlePressed = false;
+                }
                 break;
             case "WindowResize":
-
                 break;
-
         }
-
     }
 
     public void handleWindowEvent(WindowEvent windowEvent, string eventType)
     {
-        Debug.Log(eventType);
         if (Bootstrap.getRunningGame().isRunning() == false)
         {
             return;
         }
 
-        //if (windowEvent.CloseRequested == true) System.Environment.Exit(0);
-
         switch (eventType)
         {
             case "WindowResize":
-
+                updateBackgroundScale();
                 break;
             case "WindowCloseRequested":
-                System.Environment.Exit(0);
+                Environment.Exit(0);
                 break;
+        }
+    }
+
+    private void updateFullscreenState()
+    {
+        // press and release the middle mouse button to toggle fullscreen
+        if (mouseMiddlePressed == false && prevMouseMiddlePressed == true)
+        {
+            if (isFullscreen)
+            {
+                Bootstrap.getDisplay().setWindowed(screenWidth, screenHeight);
+                isFullscreen = false;
+            }
+            else
+            {
+                Bootstrap.getDisplay().setFullscreen();
+                isFullscreen = true;
+            }
+
+            updateBackgroundScale();
+        }
+
+        prevMouseMiddlePressed = mouseMiddlePressed;
+    }
+
+    private void updateBackgroundScale()
+    {
+        background.Transform.Scaley = (float)Bootstrap.getDisplay().getHeight() / image.Height;
+        background.Transform.Scalex = background.Transform.Scaley;
+    }
+
+    private void updateBloons(Map map, double deltaTimeMs)
+    {
+        cachedBloons.Clear();
+
+        foreach (Map.Wave wave in map.Waves)
+        {
+            foreach (Bloon bloon in wave.Bloons)
+            {
+                bloon.updateBloon(map.Lane.getPath(), deltaTimeMs);
+                cachedBloons.Add(bloon);
+            }
+        }
+    }
+
+    // for testing
+    public void renderPathPoints(Map map)
+    {
+        foreach (LPoint point in map.Lane.getPath())
+        {
+            Bootstrap.getDisplay().drawFilledCircle(point.x, point.y, 5, System.Drawing.Color.FromArgb(255, 0, 255));
+        }
+    }
+
+    public void renderBloons()
+    {
+        Display display = Bootstrap.getDisplay();
+        foreach (Bloon bloon in cachedBloons)
+        {
+            if (!bloon.isTargetable())
+            {
+                continue;
+            }
+
+            var position = bloon.getPosition();
+            display.drawFilledCircle(position.x, position.y, bloon.getRenderRadius(), bloon.getRenderColor());
         }
     }
 
@@ -262,7 +269,7 @@ class GameBloons : Game, InputListener
         // Wave 1 - red bloons (layer 1, base speed, no camo, no regrow)
         Map.Wave wave1 = new Map.Wave()
         {
-            spawnIntervalMs = 1000, // 500ms between each bloon
+            spawnIntervalMs = 1000,
             Bloons = new List<Bloon>()
         };
 
@@ -273,66 +280,12 @@ class GameBloons : Game, InputListener
 
         List<Map.Wave> waves = new List<Map.Wave>();
         waves.Add(wave1);
-        Debug.Log("Initialized Monkey Lane with " + lane.getPath().Count + " path points and " + waves.Count + " waves.");
-        Debug.Log("Wave 1 has " + wave1.Bloons.Count + " bloons.");
-        // Initialize map
-        Map map = new Map(lane, waves);
-        return map;
+
+        return new Map(lane, waves);
     }
 
-
-    //for testing
-    public void renderPathPoints(Map map)
-    {
-        foreach (LPoint point in map.Lane.getPath())
-        {
-            Bootstrap.getDisplay().drawFilledCircle(point.x, point.y, 5, System.Drawing.Color.FromArgb(255, 0, 255));
-        }
-    }
-    
-    public void renderBloons(Map map)
-    {
-
-        double deltaTime = Bootstrap.getDeltaTime() * 1000;
-        //Debug.Log("Delta time: " + deltaTime);
-        Display display = Bootstrap.getDisplay();
-        foreach (Map.Wave wave in map.Waves)
-        {
-            foreach (Bloon bloon in wave.Bloons)
-            {
-
-                bloon.updateBloon(map.Lane.getPath(), deltaTime);
-                //Debug.Log($"Rendering bloon at position ({bloon.getPosition().x}, {bloon.getPosition().y}) with color {bloon.getColor()}");
-
-                //if in screeen area
-                if (bloon.getActive() == true)
-                {
-                    switch (bloon.getColor())
-                    {
-                        case BloonColor.Red:
-                            display.drawFilledCircle(bloon.getPosition().x, bloon.getPosition().y, 30, System.Drawing.Color.FromArgb(255, 0, 0));
-                            break;
-                        case BloonColor.Blue:
-                            display.drawFilledCircle(bloon.getPosition().x, bloon.getPosition().y, 10, System.Drawing.Color.FromArgb(0, 0, 255));
-                            break;
-                        case BloonColor.Green:
-                            display.drawFilledCircle(bloon.getPosition().x, bloon.getPosition().y, 10, System.Drawing.Color.FromArgb(0, 255, 0));
-                            break;
-                        default:
-                            display.drawFilledCircle(bloon.getPosition().x, bloon.getPosition().y, 10, System.Drawing.Color.FromArgb(255, 255, 255));
-                            break;
-
-                    }
-                }
-
-
-            }
-        }
-    }
     public override int getTargetFrameRate()
     {
         return 120; // cap at 120 fps
     }
-
-
 }

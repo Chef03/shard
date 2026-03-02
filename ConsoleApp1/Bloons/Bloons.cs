@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.Design;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Drawing;
 
 namespace Shard.Bloons
 {
@@ -33,22 +30,19 @@ namespace Shard.Bloons
         private BloonColor color;
         private int layer;
         private double speed;
-        private bool camo;
-        private bool regrow;
+        private readonly bool camo;
+        private readonly bool regrow;
 
-        private double spawnDelayMs; // ms to wait before starting to move
+        private readonly double spawnDelayMs; // ms to wait before starting to move
         private double elapsedTime = 0;
         private bool active = false; // only moves when active
         private bool end = false; //reach the end
+        private bool popped = false;
 
         private double xPos;
         private double yPos;
         private LPoint position => new LPoint() { x = (int)xPos, y = (int)yPos };
         private int nextPointIndex; // index of the next point in the lane path that the bloon is moving towards
-
-
-        private const double BASE_SPEED = 1;
-        private const double SPEED_INCREMENT = 0.5;
 
         public Bloon(BloonColor color, int layer, double speed, bool camo, bool regrow, double xStartPos, double YstartPos, double spawnDelayMs)
         {
@@ -65,29 +59,63 @@ namespace Shard.Bloons
 
         public void pop(int damage)
         {
+            if (popped || damage <= 0)
+            {
+                return;
+            }
 
-            //update color, speed, camo, regrow based on new layer
+            layer -= damage;
+            if (layer <= 0)
+            {
+                active = false;
+                popped = true;
+            }
         }
-        
+
+        public bool isTargetable()
+        {
+            return active && !end && !popped;
+        }
 
         public LPoint getPosition()
         {
             return position;
         }
+
         public double getSpeed()
         {
             return speed;
         }
+
         public BloonColor getColor()
         {
             return color;
         }
-        public int getNextPointIndex() { 
+
+        public int getNextPointIndex()
+        {
             return nextPointIndex;
         }
+
         public bool getActive()
         {
             return active;
+        }
+
+        public int getRenderRadius()
+        {
+            return color == BloonColor.Red ? 30 : 10;
+        }
+
+        public Color getRenderColor()
+        {
+            return color switch
+            {
+                BloonColor.Red => Color.FromArgb(255, 0, 0),
+                BloonColor.Blue => Color.FromArgb(0, 0, 255),
+                BloonColor.Green => Color.FromArgb(0, 255, 0),
+                _ => Color.FromArgb(255, 255, 255)
+            };
         }
 
         public void moveTowardsPoint(LPoint target)
@@ -104,43 +132,46 @@ namespace Shard.Bloons
         }
         public void updateBloon(List<LPoint> path, double deltaMs)
         {
-            if (!end)
+            if (popped || end)
             {
-                elapsedTime += deltaMs;
-                Debug.Log($"Bloon at ({position.x}, {position.y}) with speed {speed} and elapsed time {elapsedTime} ms. Is active: {active}");
-                if (elapsedTime >= spawnDelayMs)
-                {
-                    active = true;
-                }
-                else { return; }
+                active = false;
+                return;
+            }
 
-                int nextIndex = nextPointIndex;
-                if (nextIndex <= path.Count - 1)
-                {
-                    LPoint target = path[nextPointIndex];
-                    //Debug.Log($"Bloon at ({position.x}, {position.y}) moving towards ({target.x}, {target.y}) with speed {speed}");
-                    moveTowardsPoint(target);
+            elapsedTime += deltaMs;
+            if (elapsedTime >= spawnDelayMs)
+            {
+                active = true;
+            }
+            else
+            {
+                return;
+            }
 
-                    //Check bllon has reached the target point, account for rounding errors
-                    if (position.x <= target.x + 1 && position.x >= target.x - 1)
-                    {
-                        if (position.y <= target.y + 1 && position.y >= target.y - 1)
-                        {
-                            nextPointIndex++;
-                        }
-                    }
-                }
-                //if reach end
-                if (position.x <= path[path.Count - 1].x + 1 && position.x >= path[path.Count - 1].x - 1)
+            int nextIndex = nextPointIndex;
+            if (nextIndex <= path.Count - 1)
+            {
+                LPoint target = path[nextPointIndex];
+                moveTowardsPoint(target);
+
+                //Check bllon has reached the target point, account for rounding errors
+                if (position.x <= target.x + 1 && position.x >= target.x - 1)
                 {
-                    if (position.y <= path[path.Count - 1].y + 1 && position.y >= path[path.Count - 1].y - 1)
+                    if (position.y <= target.y + 1 && position.y >= target.y - 1)
                     {
-                        active = false;
-                        end = true;
+                        nextPointIndex++;
                     }
                 }
             }
-
+            //if reach end
+            if (position.x <= path[path.Count - 1].x + 1 && position.x >= path[path.Count - 1].x - 1)
+            {
+                if (position.y <= path[path.Count - 1].y + 1 && position.y >= path[path.Count - 1].y - 1)
+                {
+                    active = false;
+                    end = true;
+                }
+            }
         }
 
         //TODO: hitting bloons, reaching end, regrowing
