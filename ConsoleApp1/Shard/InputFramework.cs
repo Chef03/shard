@@ -122,7 +122,9 @@ namespace Shard
                 
                 if ((SDL_EventType)ev.type == SDL_EventType.SDL_EVENT_WINDOW_RESIZED)
                 {
-                   informListeners(ie, "WindowResize");
+                    window.Width = (int)ev.window.data1;
+                    window.Height = (int)ev.window.data2;
+                    informListeners(window, "WindowResize");
                 }
                
 

@@ -14,7 +14,7 @@ namespace Shard
 {
     public unsafe class SoundSDL : Sound
     {
-        private static int masterVolumePercent = 60;
+        private static int masterVolumePercent = 20;
         private static MIX_Mixer* mixer;
         private MIX_Track[] tracks;
 
@@ -28,7 +28,6 @@ namespace Shard
                     return null;
                 }
                 mixer = initMixer();
-                applyMixerVolume(mixer);
             }
 
             return mixer;
@@ -74,10 +73,10 @@ namespace Shard
             }
         }
 
-        public override void setVolumePercent(int volumePercent)
+        public override void setVolumePercent(MIX_Track* track, int volumePercent)
         {
-            masterVolumePercent = Math.Clamp(volumePercent, 0, 100);
-            applyMixerVolume(getMixerInstance());
+            Math.Clamp(volumePercent, 0, 100);
+            applyTrackVolume(track, volumePercent);
         }
 
         public override int getVolumePercent()
@@ -142,14 +141,14 @@ namespace Shard
             return clamped / 100f;
         }
 
-        private static void applyMixerVolume(MIX_Mixer* targetMixer)
+        private void applyTrackVolume(MIX_Track* track, int volume)
         {
-            if (targetMixer == null)
+            if (track == null)
             {
                 return;
             }
 
-            SDL3_mixer.MIX_SetMasterGain(targetMixer, toGain(masterVolumePercent));
+            SDL3_mixer.MIX_SetTrackGain(track, toGain(volume));
         }
 
     }

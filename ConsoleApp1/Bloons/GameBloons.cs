@@ -10,6 +10,8 @@ namespace Shard;
 
 class GameBloons : Game, InputListener
 {
+    private const int AspectRatioWidth = 16;
+    private const int AspectRatioHeight = 9;
     private GameObject background;
     private int mouseX;
     private int mouseY;
@@ -73,16 +75,13 @@ class GameBloons : Game, InputListener
         Bootstrap.getDisplay().setSDLSize(screenWidth, screenHeight);
 
         soundManager = new SoundManager();
-        var volumePercent = Bootstrap.getSound().getVolumePercent();
-        Bootstrap.getSound().setVolumePercent(volumePercent);
-
+        
         unsafe
         {
-            var track = Bootstrap.getSound().playSound ("Sunshine Serenade.mp3", true, 10, 10);
-            Console.WriteLine("Track: " + track->ToString());
-            this.track = track;
+             var track = Bootstrap.getSound().playSound ("Sunshine Serenade.mp3", true, 10, 10);
+             Console.WriteLine("Track: " + track->ToString());
+             this.track = track;
         }
-        //Bootstrap.getSound().playSound ("yeet.mp3", true, 5, 30);
         
         background = new GameObject();
         background.Transform.SpritePath = getAssetManager().getAssetPath("Monkey_Lane_1390x1036.png");
@@ -118,10 +117,9 @@ class GameBloons : Game, InputListener
         
         unsafe
         {
-            Bootstrap.getSound().pan(this.track ,200 - (val * 200),  val * 200);
+            Bootstrap.getSound().pan(this.track ,100 - (val * 100),  val * 100);
+            this.soundManager.handleVolumeInput(this.track, input, eventType);
         }
-
-        this.soundManager.handleVolumeInput(input, eventType);
 
         //Debug.Log("eventType = " + eventType);
 
@@ -186,6 +184,7 @@ class GameBloons : Game, InputListener
         switch (eventType)
         {
             case "WindowResize":
+                applyAspectRatio(windowEvent.Width, windowEvent.Height);
                 updateBackgroundScale();
                 break;
             case "WindowCloseRequested":
@@ -218,8 +217,48 @@ class GameBloons : Game, InputListener
 
     private void updateBackgroundScale()
     {
-        background.Transform.Scaley = (float)Bootstrap.getDisplay().getHeight() / image.Height;
-        background.Transform.Scalex = background.Transform.Scaley;
+        var display = Bootstrap.getDisplay();
+        var widthScale = (float)display.getWidth() / image.Width;
+        var heightScale = (float)display.getHeight() / image.Height;
+        var uniformScale = MathF.Min(widthScale, heightScale);
+        background.Transform.Scalex = uniformScale;
+        background.Transform.Scaley = uniformScale;
+    }
+
+    private void applyAspectRatio(int requestedWidth, int requestedHeight)
+    {
+        if (requestedWidth <= 0 || requestedHeight <= 0)
+        {
+            return;
+        }
+
+        var display = Bootstrap.getDisplay();
+
+        if (isFullscreen)
+        {
+            display.setSize(requestedWidth, requestedHeight);
+            return;
+        }
+
+        var adjustedWidth = requestedWidth;
+        var adjustedHeight = requestedHeight;
+
+        if (requestedWidth * AspectRatioHeight > requestedHeight * AspectRatioWidth)
+        {
+            adjustedWidth = (requestedHeight * AspectRatioWidth) / AspectRatioHeight;
+        }
+        else
+        {
+            adjustedHeight = (requestedWidth * AspectRatioHeight) / AspectRatioWidth;
+        }
+
+        if (adjustedWidth != requestedWidth || adjustedHeight != requestedHeight)
+        {
+            display.setWindowed(adjustedWidth, adjustedHeight);
+            return;
+        }
+
+        display.setSize(adjustedWidth, adjustedHeight);
     }
 
     private void updateBloons(Map map, double deltaTimeMs)

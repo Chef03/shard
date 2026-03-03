@@ -16,7 +16,7 @@ namespace Shard
 
         public abstract unsafe void pan(MIX_Track* track, float left, float right);
         
-        public virtual void setVolumePercent(int volumePercent)
+        public virtual unsafe void setVolumePercent(MIX_Track* track, int volumePercent)
         {
         }
 

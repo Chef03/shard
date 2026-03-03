@@ -246,13 +246,13 @@ namespace Shard
 
                     sRect.x = 0;
                     sRect.y = 0;
-                    sRect.w = (float)(trans.Wid * trans.Scalex);
-                    sRect.h = (float)(trans.Ht * trans.Scaley);
+                    sRect.w = trans.Wid;
+                    sRect.h = trans.Ht;
 
                     tRect.x = (float)trans.X;
                     tRect.y = (float)trans.Y;
-                    tRect.w = sRect.w;
-                    tRect.h = sRect.h;
+                    tRect.w = (float)(trans.Wid * trans.Scalex);
+                    tRect.h = (float)(trans.Ht * trans.Scaley);
 
                     SDL_RenderTextureRotated(_rend, sprite, &sRect, &tRect, trans.Rotz, null, SDL_FlipMode.SDL_FLIP_NONE);
                 }

@@ -6,7 +6,7 @@ namespace Shard;
 class SoundManager
 {
     
-    private int volumePercent = 60;
+    private int volumePercent = 20;
     private const int VolumeTopMargin = 24;
     private const int VolumeRightMargin = 24;
     private const int VolumeTrackWidth = 170;
@@ -57,7 +57,7 @@ class SoundManager
         }
     }
     
-    public void handleVolumeInput(InputEvent input, string eventType)
+    public unsafe void handleVolumeInput(MIX_Track* track, InputEvent input, string eventType)
     {
         if (eventType == "MouseDown" && input.Button == 1)
         {
@@ -67,17 +67,17 @@ class SoundManager
             }
 
             volumeDragging = true;
-            setVolumeFromMouse(input.X);
+            setVolumeFromMouse(track, input.X);
         }
 
         if (eventType == "MouseMotion" && volumeDragging)
         {
-            setVolumeFromMouse(input.X);
+            setVolumeFromMouse(track, input.X);
         }
 
         if (eventType == "MouseUp" && input.Button == 1 && volumeDragging)
         {
-            setVolumeFromMouse(input.X);
+            setVolumeFromMouse(track, input.X);
             volumeDragging = false;
         }
 
@@ -100,7 +100,7 @@ class SoundManager
         return x >= minX && x <= maxX && y >= minY && y <= maxY;
     }
 
-    private void setVolumeFromMouse(int mouseXPos)
+    private unsafe void setVolumeFromMouse(MIX_Track* track, int mouseXPos)
     {
         var display = Bootstrap.getDisplay();
         getVolumeSliderLayout(display.getWidth(), out var xStart, out _, out _);
@@ -112,7 +112,7 @@ class SoundManager
         }
 
         volumePercent = nextVolume;
-        Bootstrap.getSound().setVolumePercent(volumePercent);
+        Bootstrap.getSound().setVolumePercent(track, volumePercent);
     }
 
 }

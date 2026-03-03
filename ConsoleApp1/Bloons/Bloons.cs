@@ -59,17 +59,25 @@ namespace Shard.Bloons
 
         public void pop(int damage)
         {
+            
+            
             if (popped || damage <= 0)
             {
                 return;
             }
-
+            
+            this.popSound();
             layer -= damage;
             if (layer <= 0)
             {
                 active = false;
                 popped = true;
             }
+        }
+
+        private unsafe void popSound()
+        {
+            var track = Bootstrap.getSound().playSound ("pop.mp3", false, 10, 10);
         }
 
         public bool isTargetable()
