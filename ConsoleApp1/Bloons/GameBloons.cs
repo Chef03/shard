@@ -297,7 +297,7 @@ class GameBloons : Game, InputListener
 
         for (int i = 1; i < 6; i++)
         {
-            wave1.Bloons.Add(new Bloon(BloonColor.Red, 1, 0.5, false, false, startX, startY, spawnDelayMs: i * wave1.spawnIntervalMs));
+            wave1.Bloons.Add(new Bloon( 3, 0.5, false, false, startX, startY, spawnDelayMs: i * wave1.spawnIntervalMs));
         }
 
         List<Map.Wave> waves = new List<Map.Wave>();

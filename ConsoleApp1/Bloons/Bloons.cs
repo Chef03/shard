@@ -44,9 +44,8 @@ namespace Shard.Bloons
         private LPoint position => new LPoint() { x = (int)xPos, y = (int)yPos };
         private int nextPointIndex; // index of the next point in the lane path that the bloon is moving towards
 
-        public Bloon(BloonColor color, int layer, double speed, bool camo, bool regrow, double xStartPos, double YstartPos, double spawnDelayMs)
+        public Bloon(int layer, double speed, bool camo, bool regrow, double xStartPos, double YstartPos, double spawnDelayMs)
         {
-            this.color = color;
             this.layer = layer;
             this.speed = speed;
             this.camo = camo;
@@ -56,6 +55,7 @@ namespace Shard.Bloons
             this.yPos = YstartPos;
             this.spawnDelayMs = spawnDelayMs;
         }
+        
 
         public void pop(int damage)
         {
@@ -96,7 +96,7 @@ namespace Shard.Bloons
         {
             return nextPointIndex;
         }
-
+        
         public bool getActive()
         {
             return active;
@@ -109,6 +109,8 @@ namespace Shard.Bloons
 
         public Color getRenderColor()
         {
+            BloonColor[] colors = [BloonColor.Red, BloonColor.Blue, BloonColor.Green, BloonColor.Yellow, BloonColor.Pink];
+            BloonColor color = colors[this.layer - 1];
             return color switch
             {
                 BloonColor.Red => Color.FromArgb(255, 0, 0),
