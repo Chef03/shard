@@ -4,6 +4,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using SDL;
 
 namespace Shard;
 
@@ -25,6 +26,7 @@ class GameBloons : Game, InputListener
     private readonly List<Bloon> cachedBloons = new List<Bloon>();
 
     private SoundManager soundManager;
+    private unsafe MIX_Track* track;
 
     public override bool isRunning()
     {
@@ -73,8 +75,15 @@ class GameBloons : Game, InputListener
         soundManager = new SoundManager();
         var volumePercent = Bootstrap.getSound().getVolumePercent();
         Bootstrap.getSound().setVolumePercent(volumePercent);
-        Bootstrap.getSound().playSound("Sunshine Serenade.mp3");
 
+        unsafe
+        {
+            var track = Bootstrap.getSound().playSound ("Sunshine Serenade.mp3", true, 10, 10);
+            Console.WriteLine("Track: " + track->ToString());
+            this.track = track;
+        }
+        //Bootstrap.getSound().playSound ("yeet.mp3", true, 5, 30);
+        
         background = new GameObject();
         background.Transform.SpritePath = getAssetManager().getAssetPath("Monkey_Lane_1390x1036.png");
 
@@ -84,6 +93,8 @@ class GameBloons : Game, InputListener
         }
 
         updateBackgroundScale();
+
+        // Only works on 1920x1080 displays for now
 
         // Initialize map 1: Monkey lane
         monkeyLane = initializeMonkeyLane();
@@ -102,7 +113,18 @@ class GameBloons : Game, InputListener
             mouseY = input.Y;
         }
 
-        soundManager.handleVolumeInput(input, eventType);
+        var width = (float) Bootstrap.getDisplay().getWidth();
+        var val = mouseX / width;
+        
+        unsafe
+        {
+            Bootstrap.getSound().pan(this.track ,200 - (val * 200),  val * 200);
+        }
+
+        this.soundManager.handleVolumeInput(input, eventType);
+
+        //Debug.Log("eventType = " + eventType);
+
 
         // left click = 1
         // right click = 3
