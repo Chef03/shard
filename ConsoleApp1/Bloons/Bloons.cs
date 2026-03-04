@@ -43,6 +43,7 @@ namespace Shard.Bloons
         private double yPos;
         private LPoint position => new LPoint() { x = (int)xPos, y = (int)yPos };
         private int nextPointIndex; // index of the next point in the lane path that the bloon is moving towards
+        private bool isTargetable = true;// can be targeted by towers, becomes false when in tunnels
 
         public Bloon(int layer, double speed, bool camo, bool regrow, double xStartPos, double YstartPos, double spawnDelayMs)
         {
@@ -80,15 +81,17 @@ namespace Shard.Bloons
             var track = Bootstrap.getSound().playSound ("pop.mp3", false, 10, 10);
         }
 
-        public bool isTargetable()
-        {
-            return active && !end && !popped;
-        }
+        //public bool isTargetable()
+        //{
+        //    return active && !end && !popped;
+        //}
 
         public LPoint getPosition()
         {
             return position;
         }
+
+        public bool getIsTargetable() { return isTargetable; }
 
         public double getSpeed()
         {
@@ -158,10 +161,16 @@ namespace Shard.Bloons
                 return;
             }
 
+            //if(active && !end && !popped)
+            //{
+            //    isTargetable = true;
+            //}
+
             int nextIndex = nextPointIndex;
             if (nextIndex <= path.Count - 1)
             {
                 LPoint target = path[nextPointIndex];
+                
                 moveTowardsPoint(target);
 
                 //Check bllon has reached the target point, account for rounding errors
@@ -170,6 +179,16 @@ namespace Shard.Bloons
                     if (position.y <= target.y + 1 && position.y >= target.y - 1)
                     {
                         nextPointIndex++;
+                        if (target.tunnelStart)
+                        {
+                            isTargetable = false;
+
+                        }
+                        if (target.tunnelEnd)
+                        {
+                            isTargetable = true;
+                        }
+
                     }
                 }
             }

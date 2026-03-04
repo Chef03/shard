@@ -328,7 +328,7 @@ class GameBloons : Game, InputListener
         Display display = Bootstrap.getDisplay();
         foreach (Bloon bloon in cachedBloons)
         {
-            if (!bloon.isTargetable())
+            if (!bloon.getIsTargetable() || !bloon.getActive())
             {
                 continue;
             }
@@ -388,21 +388,25 @@ class GameBloons : Game, InputListener
         List<LPoint> path = new List<LPoint>()
         {
             new LPoint() { x = 0,    y = 635  },
-            new LPoint() { x = 345,  y = 622  },
-            new LPoint() { x = 361,  y = 475  },
-            new LPoint() { x = 588,  y = 479  },
-            new LPoint() { x = 600,  y = 1018 },
+            new LPoint() { x = 350,  y = 630  },
+            new LPoint() { x = 350,  y = 475  },
+            new LPoint() { x = 590,  y = 475  },
+            new LPoint() { x = 590,  y = 1015 },
             new LPoint() { x = 940,  y = 1015 },
-            new LPoint() { x = 936,  y = 319  },
-            new LPoint() { x = 352,  y = 288  },
-            new LPoint() { x = 356,  y = 141  },
-            new LPoint() { x = 1125, y = 146  },
-            new LPoint() { x = 1137, y = 286  },
-            new LPoint() { x = 1334, y = 307  },
+            new LPoint() { x = 940,  y = 950, tunnelStart = true}, //tunnel 
+            new LPoint() { x = 940,  y = 648, tunnelEnd = true}, //tunnel 
+            new LPoint() { x = 940,  y = 305  },
+            new LPoint() { x = 352,  y = 291  },
+            new LPoint() { x = 352,  y = 136  },
+            new LPoint() { x = 1128, y = 136  },
+            new LPoint() { x = 1128, y = 286  },
+            new LPoint() { x = 1334, y = 286  },
             new LPoint() { x = 1334, y = 473  },
-            new LPoint() { x = 1141, y = 499  },
-            new LPoint() { x = 1117, y = 785  },
-            new LPoint() { x = 354,  y = 821  },
+            new LPoint() { x = 1135, y = 473  },
+            new LPoint() { x = 1135, y = 795  },
+            new LPoint() { x = 754,  y = 795, tunnelStart = true }, //tunnel 
+            new LPoint() { x = 427,  y = 814, tunnelEnd = true }, //tunnel 
+            new LPoint() { x = 347,  y = 829  },
             new LPoint() { x = 347,  y = 1080 }
         };
 
@@ -420,7 +424,7 @@ class GameBloons : Game, InputListener
 
         for (int i = 1; i < 6; i++)
         {
-            wave1.Bloons.Add(new Bloon( 3, 0.5, false, false, startX, startY, spawnDelayMs: i * wave1.spawnIntervalMs));
+            wave1.Bloons.Add(new Bloon( 3, 1, false, false, startX, startY, spawnDelayMs: i * wave1.spawnIntervalMs));
         }
 
         // Wave 2 - yellow bloons (layer 4)
@@ -434,7 +438,7 @@ class GameBloons : Game, InputListener
         var wave2StartDelayMs = wave1DurationMs + 1000;
         for (int i = 1; i <= 20; i++)
         {
-            wave2.Bloons.Add(new Bloon(4, 0.5, false, false, startX, startY, spawnDelayMs: wave2StartDelayMs + (i * wave2.spawnIntervalMs)));
+            wave2.Bloons.Add(new Bloon(4, 2, false, false, startX, startY, spawnDelayMs: wave2StartDelayMs + (i * wave2.spawnIntervalMs)));
         }
 
         List<Map.Wave> waves = new List<Map.Wave>();

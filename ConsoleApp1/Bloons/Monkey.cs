@@ -88,7 +88,7 @@ namespace Shard.Bloons
 
             foreach (var bloon in bloons)
             {
-                if (!bloon.isTargetable())
+                if (!bloon.getIsTargetable())
                 {
                     continue;
                 }
@@ -142,7 +142,7 @@ namespace Shard.Bloons
                 return;
             }
 
-            if (!target.isTargetable())
+            if (!target.getIsTargetable())
             {
                 active = false;
                 return;
