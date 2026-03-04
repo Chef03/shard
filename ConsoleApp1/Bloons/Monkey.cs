@@ -22,7 +22,7 @@ namespace Shard.Bloons
             this.shotCooldownRemainingMs = 0;
         }
 
-        public void update(List<Bloon> bloons, double deltaMs)
+        public void update(List<Bloon> bloons, double deltaMs, Player owner)
         {
             if (shotCooldownRemainingMs > 0)
             {
@@ -31,7 +31,7 @@ namespace Shard.Bloons
 
             if (activeProjectile != null)
             {
-                activeProjectile.update(deltaMs);
+                activeProjectile.update(deltaMs, owner);
                 if (!activeProjectile.getActive())
                 {
                     activeProjectile = null;
@@ -50,6 +50,7 @@ namespace Shard.Bloons
             }
 
             activeProjectile = new Projectile(position, target, damage, speedPixelsPerSecond: 850);
+
             shotCooldownRemainingMs = attackCooldownMs;
         }
 
@@ -135,7 +136,7 @@ namespace Shard.Bloons
             return active;
         }
 
-        public void update(double deltaMs)
+        public void update(double deltaMs, Player owner)
         {
             if (!active)
             {
@@ -158,6 +159,7 @@ namespace Shard.Bloons
             if (distance <= hitDistance || distance <= stepDistance)
             {
                 target.pop(damage);
+                owner.addMoney(damage);
                 active = false;
                 return;
             }

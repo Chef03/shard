@@ -29,6 +29,9 @@ class GameBloons : Game, InputListener
     private Map monkeyLane;
     private Monkey placedTower;
     private readonly List<Bloon> cachedBloons = new List<Bloon>();
+    private List<Player> players = new List<Player>();
+    private int currentPlayerID = 0; 
+    private bool gameover = false;
 
     private SoundManager soundManager;
     private unsafe MIX_Track* track;
@@ -46,6 +49,12 @@ class GameBloons : Game, InputListener
         display.showText($"Mouse: {mouseX}, {mouseY}", 10, 30, 12, 255, 255, 255);
         display.showText("Left Click: Place Tower", 10, 50, 12, 255, 255, 255);
 
+        string moneyText = $"$ {players[currentPlayerID].getMoney()}";
+        string livesText = $"<3 {players[currentPlayerID].getLives()}";
+        int centerX = display.getWidth() / 2;
+        display.showText(moneyText, centerX - 60, 10, 16, 255, 215, 0);   // gold
+        display.showText(livesText, centerX + 20, 10, 16, 255, 50, 50);  // red
+
         string bstate = (mouseLeft ? "L" : "-") + (mouseRight ? "R" : "-");
         display.showText($"Buttons: {bstate}", 10, 70, 12, 255, 255, 255);
 
@@ -60,9 +69,11 @@ class GameBloons : Game, InputListener
         double deltaTimeMs = Bootstrap.getDeltaTime() * 1000;
         updateBloons(monkeyLane, deltaTimeMs);
 
+
+        //TODO: tower belongs to player, and get money when popping bloons
         if (placedTower != null)
         {
-            placedTower.update(cachedBloons, deltaTimeMs);
+            placedTower.update(cachedBloons,  deltaTimeMs, players[currentPlayerID]);
         }
 
         renderBloons(worldScale);
@@ -71,6 +82,14 @@ class GameBloons : Game, InputListener
         if (placedTower != null)
         {
             placedTower.draw(display, worldScale, background.Transform.X, background.Transform.Y);
+        }
+
+        foreach (Player player in players)
+        {
+            if(player.getLives() <= 0)
+            {
+                gameover = true;
+            }
         }
     }
 
@@ -83,8 +102,9 @@ class GameBloons : Game, InputListener
         
         unsafe
         {
-             var track = Bootstrap.getSound().playSound ("Sunshine Serenade.mp3", true, 10, 10);
-             Console.WriteLine("Track: " + track->ToString());
+             var track = Bootstrap.getSound().playSound("Sunshine Serenade.mp3", true, 10, 10);
+                Bootstrap.getSound().setVolumePercent(track, soundManager.getVolumePercent());
+            Console.WriteLine("Track: " + track->ToString());
              this.track = track;
         }
         
@@ -102,6 +122,8 @@ class GameBloons : Game, InputListener
 
         // Initialize map 1: Monkey lane
         monkeyLane = initializeMonkeyLane();
+
+        players.Add(new Player(0, "bruh", true, ""));
     }
 
     public void handleInput(InputEvent input, string eventType)
@@ -279,11 +301,37 @@ class GameBloons : Game, InputListener
 
         foreach (Map.Wave wave in map.Waves)
         {
-            foreach (Bloon bloon in wave.Bloons)
+            for(int i =0; i< wave.Bloons.Count - 1; i++)
             {
+                //update each bloon
+                Bloon bloon = wave.Bloons[i];
                 bloon.updateBloon(map.Lane.getPath(), deltaTimeMs);
-                cachedBloons.Add(bloon);
+                if (bloon.getEnd())
+                {
+                    players[currentPlayerID].loseLives(bloon.getLayer());
+
+                }
+                if (bloon.getPopped() || bloon.getEnd())
+                {
+                    wave.Bloons.RemoveAt(i);
+                }
+                else
+                {
+                    cachedBloons.Add(bloon);
+
+                }
+                
+
             }
+            //foreach (Bloon bloon in wave.Bloons)
+            //{
+            //    bloon.updateBloon(map.Lane.getPath(), deltaTimeMs);
+            //    if (!bloon.getPopped())
+            //    {
+            //        cachedBloons.Add(bloon);
+            //    }
+
+            //}
         }
     }
 
@@ -424,7 +472,7 @@ class GameBloons : Game, InputListener
 
         for (int i = 1; i < 6; i++)
         {
-            wave1.Bloons.Add(new Bloon( 3, 1, false, false, startX, startY, spawnDelayMs: i * wave1.spawnIntervalMs));
+            wave1.Bloons.Add(new Bloon( 3, false, false, startX, startY, spawnDelayMs: i * wave1.spawnIntervalMs));
         }
 
         // Wave 2 - yellow bloons (layer 4)
@@ -438,7 +486,7 @@ class GameBloons : Game, InputListener
         var wave2StartDelayMs = wave1DurationMs + 1000;
         for (int i = 1; i <= 20; i++)
         {
-            wave2.Bloons.Add(new Bloon(4, 2, false, false, startX, startY, spawnDelayMs: wave2StartDelayMs + (i * wave2.spawnIntervalMs)));
+            wave2.Bloons.Add(new Bloon(4, false, false, startX, startY, spawnDelayMs: wave2StartDelayMs + (i * wave2.spawnIntervalMs)));
         }
 
         List<Map.Wave> waves = new List<Map.Wave>();

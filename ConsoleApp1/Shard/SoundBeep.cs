@@ -14,7 +14,7 @@ namespace Shard
 {
     public unsafe class SoundSDL : Sound
     {
-        private static int masterVolumePercent = 20;
+        private static int masterVolumePercent = 1;
         private static MIX_Mixer* mixer;
         private MIX_Track[] tracks;
 
