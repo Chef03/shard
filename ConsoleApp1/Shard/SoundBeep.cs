@@ -47,7 +47,7 @@ namespace Shard
             SDL3_mixer.MIX_SetTrackStereo(track, &gains);
         }
 
-        public override unsafe MIX_Track* playSound(string file, bool loop = false, float left = 0, float right = 0)
+        public override unsafe MIX_Track* playSound(string file, bool loop = false, float left = 0, float right = 0, int volume = 1)
         {
    
             file = Bootstrap.getAssetManager().getAssetPath(file);
@@ -67,7 +67,7 @@ namespace Shard
 
             fixed (byte* pathPtr = System.Text.Encoding.UTF8.GetBytes(file + "\0"))
             {
-                var track = this.playTrack(pathPtr, loop, left, right);
+                var track = this.playTrack(pathPtr, loop, left, right, volume);
                 Console.WriteLine("Track: " + track->ToString());
                 return track;
             }
@@ -75,7 +75,7 @@ namespace Shard
 
         public override void setVolumePercent(MIX_Track* track, int volumePercent)
         {
-            Math.Clamp(volumePercent, 0, 100);
+            Math.Clamp(volumePercent, 0, 10);
             applyTrackVolume(track, volumePercent);
         }
 
@@ -84,7 +84,7 @@ namespace Shard
             return masterVolumePercent;
         }
 
-        private MIX_Track* playTrack(byte* pathPtr, bool loop = false, float left = 0, float right = 0)
+        private MIX_Track* playTrack(byte* pathPtr, bool loop = false, float left = 0, float right = 0, int volume = 1)
         {
             var audio = SDL3_mixer.MIX_LoadAudio(mixer, pathPtr, false);
             if (audio == null)
@@ -94,6 +94,8 @@ namespace Shard
             }
 
             var track = SDL3_mixer.MIX_CreateTrack(mixer);
+            this.applyTrackVolume(track, volume);
+            
             if (track == null)
             {
                 Debug.getInstance().log("Failed to create track: " + SDL_GetError());
@@ -148,7 +150,7 @@ namespace Shard
                 return;
             }
 
-            SDL3_mixer.MIX_SetTrackGain(track, toGain(volume));
+            SDL3_mixer.MIX_SetTrackGain(track, toGain(volume)/100);
         }
 
     }

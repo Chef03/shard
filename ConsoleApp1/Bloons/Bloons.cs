@@ -77,7 +77,7 @@ namespace Shard.Bloons
 
         private unsafe void popSound()
         {
-            var track = Bootstrap.getSound().playSound ("pop.mp3", false, 10, 10);
+            var track = Bootstrap.getSound().playSound ("pop.mp3", false, 10, 10, 15);
         }
 
         public bool isTargetable()

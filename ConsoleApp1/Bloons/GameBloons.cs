@@ -1,5 +1,4 @@
 using Shard.Bloons;
-using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Generic;
@@ -13,8 +12,10 @@ class GameBloons : Game, InputListener
 {
     private const int AspectRatioWidth = 16;
     private const int AspectRatioHeight = 9;
-    
-    private System.Drawing.Color hudColor = System.Drawing.Color.FromArgb(255, 110, 74, 42);
+    private const int HudSlotHeight = 92;
+    private const int HudSlotGap = 12;
+    private const int HudSlotTop = 90;
+    private readonly Color hudColor = Color.FromArgb(255, 110, 74, 42);
     private GameObject background;
     private int mouseX;
     private int mouseY;
@@ -27,11 +28,25 @@ class GameBloons : Game, InputListener
     private readonly int screenHeight = 1080;
     private SixLabors.ImageSharp.Image image;
     private Map monkeyLane;
-    private Monkey placedTower;
     private readonly List<Bloon> cachedBloons = new List<Bloon>();
+    private readonly List<Tower> placedTowers = new List<Tower>();
+    private readonly List<TowerOption> placeableTowers = new List<TowerOption>();
+    private int selectedTowerIndex;
 
     private SoundManager soundManager;
     private unsafe MIX_Track* track;
+
+    private sealed class TowerOption
+    {
+        public string Name { get; }
+        public Func<LPoint, Tower> CreateTower { get; }
+
+        public TowerOption(string name, Func<LPoint, Tower> createTower)
+        {
+            Name = name;
+            CreateTower = createTower;
+        }
+    }
 
     public override bool isRunning()
     {
@@ -42,12 +57,14 @@ class GameBloons : Game, InputListener
     {
         var display = Bootstrap.getDisplay();
         var worldScale = getWorldScale();
+        var selectedTowerName = getSelectedTowerName();
         display.showText("FPS: " + Bootstrap.getFPS(), 10, 10, 12, 255, 255, 255);
         display.showText($"Mouse: {mouseX}, {mouseY}", 10, 30, 12, 255, 255, 255);
-        display.showText("Left Click: Place Tower", 10, 50, 12, 255, 255, 255);
+        display.showText($"Selected Tower: {selectedTowerName}", 10, 50, 12, 255, 255, 255);
+        display.showText("Left Click HUD: Select | Left Click Map: Place", 10, 70, 12, 255, 255, 255);
 
         string bstate = (mouseLeft ? "L" : "-") + (mouseRight ? "R" : "-");
-        display.showText($"Buttons: {bstate}", 10, 70, 12, 255, 255, 255);
+        display.showText($"Buttons: {bstate}", 10, 90, 12, 255, 255, 255);
 
         display.addToDraw(background);
         drawRightSection(display);
@@ -59,18 +76,19 @@ class GameBloons : Game, InputListener
 
         double deltaTimeMs = Bootstrap.getDeltaTime() * 1000;
         updateBloons(monkeyLane, deltaTimeMs);
+        var pointerWorldPosition = toWorldPoint(mouseX, mouseY, worldScale);
 
-        if (placedTower != null)
+        foreach (var tower in placedTowers)
         {
-            placedTower.update(cachedBloons, deltaTimeMs);
+            tower.update(cachedBloons, deltaTimeMs, pointerWorldPosition);
         }
 
         renderBloons(worldScale);
         renderPathPoints(monkeyLane, worldScale);
 
-        if (placedTower != null)
+        foreach (var tower in placedTowers)
         {
-            placedTower.draw(display, worldScale, background.Transform.X, background.Transform.Y);
+            tower.draw(display, worldScale, background.Transform.X, background.Transform.Y);
         }
     }
 
@@ -84,6 +102,7 @@ class GameBloons : Game, InputListener
         unsafe
         {
              var track = Bootstrap.getSound().playSound ("Sunshine Serenade.mp3", true, 10, 10);
+             Bootstrap.getSound().setVolumePercent(track, 1);
              Console.WriteLine("Track: " + track->ToString());
              this.track = track;
         }
@@ -99,6 +118,12 @@ class GameBloons : Game, InputListener
         updateBackgroundScale();
 
         // Only works on 1920x1080 displays for now
+
+        placeableTowers.Add(new TowerOption("Monkey", position => new Monkey(position)));
+        placeableTowers.Add(new TowerOption("Dartling", position => new Dartling(position)));
+        placeableTowers.Add(new TowerOption("Bomb Shooter", position => new BombShooter(position)));
+        placeableTowers.Add(new TowerOption("Tack Shooter", position => new TackShooter(position)));
+        selectedTowerIndex = 0;
 
         // Initialize map 1: Monkey lane
         monkeyLane = initializeMonkeyLane();
@@ -144,10 +169,19 @@ class GameBloons : Game, InputListener
                 if (input.Button == 1)
                 {
                     mouseLeft = true;
-                    if (input.Y > 80)
+                    if (trySelectTowerFromHud(input.X, input.Y))
                     {
-                        var worldPosition = toWorldPoint(input.X, input.Y, getWorldScale());
-                        placedTower = new Monkey(worldPosition);
+                        break;
+                    }
+
+                    if (isScreenPointOnMap(input.X, input.Y))
+                    {
+                        var selectedTower = getSelectedTowerOption();
+                        if (selectedTower != null)
+                        {
+                            var worldPosition = toWorldPoint(input.X, input.Y, getWorldScale());
+                            placedTowers.Add(selectedTower.CreateTower(worldPosition));
+                        }
                     }
                 }
                 else if (input.Button == 3)
@@ -289,7 +323,7 @@ class GameBloons : Game, InputListener
 
     private void drawRightSection(Display display)
     {
-        var sectionStartX = (int)MathF.Ceiling(background.Transform.X + (image.Width * background.Transform.Scalex));
+        var sectionStartX = getHudStartX(display);
         var sectionEndX = display.getWidth();
         var sectionHeight = display.getHeight();
 
@@ -310,6 +344,145 @@ class GameBloons : Game, InputListener
                 this.hudColor.B,
                 this.hudColor.A);
         }
+
+        drawTowerPalette(display, sectionStartX, sectionEndX);
+    }
+
+    private void drawTowerPalette(Display display, int sectionStartX, int sectionEndX)
+    {
+        if (placeableTowers.Count == 0)
+        {
+            return;
+        }
+
+        var sectionWidth = sectionEndX - sectionStartX;
+        if (sectionWidth <= 0)
+        {
+            return;
+        }
+
+        var slotPadding = 14;
+        var slotX = sectionStartX + slotPadding;
+        var slotWidth = Math.Max(24, sectionWidth - (slotPadding * 2));
+
+        display.showText("TOWERS", slotX, 26, 26, 245, 245, 245);
+        display.showText("Select one, then click map", slotX, 56, 12, 235, 235, 235);
+
+        for (var i = 0; i < placeableTowers.Count; i++)
+        {
+            var slotY = HudSlotTop + (i * (HudSlotHeight + HudSlotGap));
+            var isSelected = i == selectedTowerIndex;
+            var slotColor = isSelected
+                ? Color.FromArgb(255, 220, 176, 120)
+                : Color.FromArgb(255, 155, 103, 65);
+
+            drawFilledRect(display, slotX, slotY, slotWidth, HudSlotHeight, slotColor);
+            drawRectOutline(display, slotX, slotY, slotWidth, HudSlotHeight, Color.FromArgb(255, 245, 236, 223));
+
+            display.showText(placeableTowers[i].Name, slotX + 14, slotY + 16, 17, 255, 255, 255);
+            display.showText(isSelected ? "Selected" : "Click to select", slotX + 14, slotY + 44, 12, 255, 255, 255);
+        }
+    }
+
+    private void drawFilledRect(Display display, int x, int y, int width, int height, Color color)
+    {
+        if (width <= 0 || height <= 0)
+        {
+            return;
+        }
+
+        for (var row = 0; row < height; row++)
+        {
+            display.drawLine(x, y + row, x + width, y + row, color.R, color.G, color.B, color.A);
+        }
+    }
+
+    private void drawRectOutline(Display display, int x, int y, int width, int height, Color color)
+    {
+        if (width <= 1 || height <= 1)
+        {
+            return;
+        }
+
+        display.drawLine(x, y, x + width, y, color.R, color.G, color.B, color.A);
+        display.drawLine(x, y + height, x + width, y + height, color.R, color.G, color.B, color.A);
+        display.drawLine(x, y, x, y + height, color.R, color.G, color.B, color.A);
+        display.drawLine(x + width, y, x + width, y + height, color.R, color.G, color.B, color.A);
+    }
+
+    private int getHudStartX(Display display)
+    {
+        if (image == null)
+        {
+            return display.getWidth();
+        }
+
+        return (int)MathF.Ceiling(background.Transform.X + (image.Width * background.Transform.Scalex));
+    }
+
+    private bool isScreenPointOnMap(int screenX, int screenY)
+    {
+        var display = Bootstrap.getDisplay();
+        var hudStartX = getHudStartX(display);
+        return screenX >= 0 && screenY >= 0 && screenY < display.getHeight() && screenX < hudStartX;
+    }
+
+    private bool trySelectTowerFromHud(int screenX, int screenY)
+    {
+        var display = Bootstrap.getDisplay();
+        var hudStartX = getHudStartX(display);
+        if (screenX < hudStartX || placeableTowers.Count == 0)
+        {
+            return false;
+        }
+
+        var sectionWidth = display.getWidth() - hudStartX;
+        var slotPadding = 14;
+        var slotX = hudStartX + slotPadding;
+        var slotWidth = Math.Max(24, sectionWidth - (slotPadding * 2));
+
+        if (screenX < slotX || screenX > slotX + slotWidth)
+        {
+            return true;
+        }
+
+        for (var i = 0; i < placeableTowers.Count; i++)
+        {
+            var slotY = HudSlotTop + (i * (HudSlotHeight + HudSlotGap));
+            if (screenY >= slotY && screenY <= slotY + HudSlotHeight)
+            {
+                selectedTowerIndex = i;
+                return true;
+            }
+        }
+
+        return true;
+    }
+
+    private TowerOption getSelectedTowerOption()
+    {
+        if (placeableTowers.Count == 0)
+        {
+            return null;
+        }
+
+        if (selectedTowerIndex < 0 || selectedTowerIndex >= placeableTowers.Count)
+        {
+            selectedTowerIndex = 0;
+        }
+
+        return placeableTowers[selectedTowerIndex];
+    }
+
+    private string getSelectedTowerName()
+    {
+        var selectedTower = getSelectedTowerOption();
+        if (selectedTower == null)
+        {
+            return "None";
+        }
+
+        return selectedTower.Name;
     }
 
     // for testing

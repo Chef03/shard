@@ -4,26 +4,36 @@ using System.Drawing;
 
 namespace Shard.Bloons
 {
-    internal class Monkey : TowerBase
+    internal class BombShooter : TowerBase
     {
         private readonly double range;
         private readonly int damage;
+        private readonly double blastRadius;
         private readonly double attackCooldownMs;
+        private readonly double projectileSpeedPixelsPerSecond;
         private double shotCooldownRemainingMs;
-        private TrackingProjectile activeProjectile;
+        private PineappleBombProjectile activeProjectile;
 
-        public Monkey(LPoint position, double range = 230, int damage = 1, double attackSpeedPerSecond = 1.7)
+        public BombShooter(
+            LPoint position,
+            double range = 280,
+            int damage = 1,
+            double blastRadius = 95,
+            double attackSpeedPerSecond = 0.9,
+            double projectileSpeedPixelsPerSecond = 750)
             : base(position)
         {
             this.range = range;
             this.damage = damage;
+            this.blastRadius = blastRadius;
             this.attackCooldownMs = 1000.0 / attackSpeedPerSecond;
+            this.projectileSpeedPixelsPerSecond = projectileSpeedPixelsPerSecond;
             this.shotCooldownRemainingMs = 0;
         }
 
         public override string getName()
         {
-            return "Monkey";
+            return "Bomb Shooter";
         }
 
         public override void update(List<Bloon> bloons, double deltaMs, LPoint pointerWorldPosition)
@@ -35,7 +45,7 @@ namespace Shard.Bloons
 
             if (activeProjectile != null)
             {
-                activeProjectile.update(deltaMs);
+                activeProjectile.update(bloons, deltaMs);
                 if (!activeProjectile.getActive())
                 {
                     activeProjectile = null;
@@ -53,16 +63,21 @@ namespace Shard.Bloons
                 return;
             }
 
-            activeProjectile = new TrackingProjectile(position, target, damage, speedPixelsPerSecond: 850);
+            activeProjectile = new PineappleBombProjectile(
+                position,
+                target,
+                damage,
+                blastRadius,
+                projectileSpeedPixelsPerSecond);
             shotCooldownRemainingMs = attackCooldownMs;
         }
 
         public override void draw(Display display, float worldScale = 1.0f, float worldOffsetX = 0.0f, float worldOffsetY = 0.0f)
         {
             var screenPosition = toScreenPoint(position, worldScale, worldOffsetX, worldOffsetY);
-            display.drawCircle(screenPosition.x, screenPosition.y, toScreenSize(range, worldScale), Color.FromArgb(75, 255, 255, 255));
-            display.drawFilledCircle(screenPosition.x, screenPosition.y, toScreenSize(16, worldScale), Color.FromArgb(160, 90, 45));
-            display.drawFilledCircle(screenPosition.x, screenPosition.y, toScreenSize(6, worldScale), Color.FromArgb(40, 40, 40));
+            display.drawCircle(screenPosition.x, screenPosition.y, toScreenSize(range, worldScale), Color.FromArgb(75, 255, 235, 135));
+            display.drawFilledCircle(screenPosition.x, screenPosition.y, toScreenSize(17, worldScale), Color.FromArgb(90, 110, 115));
+            display.drawFilledCircle(screenPosition.x, screenPosition.y, toScreenSize(8, worldScale), Color.FromArgb(25, 25, 25));
 
             if (activeProjectile != null && activeProjectile.getActive())
             {
@@ -71,19 +86,26 @@ namespace Shard.Bloons
         }
     }
 
-    internal class TrackingProjectile
+    internal class PineappleBombProjectile
     {
         private readonly Bloon target;
         private readonly int damage;
+        private readonly double blastRadius;
         private readonly double speedPixelsPerSecond;
         private bool active;
         private double xPos;
         private double yPos;
 
-        public TrackingProjectile(LPoint spawnPosition, Bloon target, int damage, double speedPixelsPerSecond)
+        public PineappleBombProjectile(
+            LPoint spawnPosition,
+            Bloon target,
+            int damage,
+            double blastRadius,
+            double speedPixelsPerSecond)
         {
             this.target = target;
             this.damage = damage;
+            this.blastRadius = blastRadius;
             this.speedPixelsPerSecond = speedPixelsPerSecond;
             this.active = true;
             this.xPos = spawnPosition.x;
@@ -95,16 +117,10 @@ namespace Shard.Bloons
             return active;
         }
 
-        public void update(double deltaMs)
+        public void update(List<Bloon> bloons, double deltaMs)
         {
             if (!active)
             {
-                return;
-            }
-
-            if (!target.isTargetable())
-            {
-                active = false;
                 return;
             }
 
@@ -117,12 +133,14 @@ namespace Shard.Bloons
 
             if (distance <= hitDistance || distance <= stepDistance)
             {
-                target.pop(damage);
+                xPos = targetPosition.x;
+                yPos = targetPosition.y;
+                explode(bloons);
                 active = false;
                 return;
             }
 
-            if (distance == 0)
+            if (distance <= 0.001)
             {
                 return;
             }
@@ -138,11 +156,37 @@ namespace Shard.Bloons
                 return;
             }
 
-            display.drawFilledCircle(
-                (int)MathF.Round(worldOffsetX + ((float)xPos * worldScale)),
-                (int)MathF.Round(worldOffsetY + ((float)yPos * worldScale)),
-                Math.Max(1, (int)MathF.Round(4 * worldScale)),
-                Color.FromArgb(255, 40, 40));
+            var screenX = (int)MathF.Round(worldOffsetX + ((float)xPos * worldScale));
+            var screenY = (int)MathF.Round(worldOffsetY + ((float)yPos * worldScale));
+            var bodyRadius = Math.Max(1, (int)MathF.Round(5 * worldScale));
+            var leafLength = Math.Max(1, (int)MathF.Round(6 * worldScale));
+
+            display.drawFilledCircle(screenX, screenY, bodyRadius, Color.FromArgb(245, 210, 70));
+            display.drawLine(screenX, screenY - bodyRadius, screenX, screenY - bodyRadius - leafLength, 70, 180, 70, 255);
+            display.drawLine(screenX - 2, screenY - bodyRadius + 1, screenX - 4, screenY - bodyRadius - leafLength + 2, 70, 180, 70, 255);
+            display.drawLine(screenX + 2, screenY - bodyRadius + 1, screenX + 4, screenY - bodyRadius - leafLength + 2, 70, 180, 70, 255);
+        }
+
+        private void explode(List<Bloon> bloons)
+        {
+            var blastRadiusSq = blastRadius * blastRadius;
+            foreach (var bloon in bloons)
+            {
+                if (!bloon.isTargetable())
+                {
+                    continue;
+                }
+
+                var bloonPosition = bloon.getPosition();
+                var dx = bloonPosition.x - xPos;
+                var dy = bloonPosition.y - yPos;
+                var distanceSq = (dx * dx) + (dy * dy);
+
+                if (distanceSq <= blastRadiusSq)
+                {
+                    bloon.pop(damage);
+                }
+            }
         }
     }
 }
