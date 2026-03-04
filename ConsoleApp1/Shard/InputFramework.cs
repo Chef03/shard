@@ -126,6 +126,16 @@ namespace Shard
                     window.Height = (int)ev.window.data2;
                     informListeners(window, "WindowResize");
                 }
+
+                if ((SDL_EventType)ev.type == SDL_EventType.SDL_EVENT_WINDOW_ENTER_FULLSCREEN)
+                {
+                    informListeners(window, "WindowEnterFullscreen");
+                }
+
+                if ((SDL_EventType)ev.type == SDL_EventType.SDL_EVENT_WINDOW_LEAVE_FULLSCREEN)
+                {
+                    informListeners(window, "WindowLeaveFullscreen");
+                }
                
 
                 tick -= timeInterval;

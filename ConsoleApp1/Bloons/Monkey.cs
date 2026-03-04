@@ -53,16 +53,31 @@ namespace Shard.Bloons
             shotCooldownRemainingMs = attackCooldownMs;
         }
 
-        public void draw(Display display)
+        public void draw(Display display, float worldScale = 1.0f, float worldOffsetX = 0.0f, float worldOffsetY = 0.0f)
         {
-            display.drawCircle(position.x, position.y, (int)range, Color.FromArgb(75, 255, 255, 255));
-            display.drawFilledCircle(position.x, position.y, 16, Color.FromArgb(160, 90, 45));
-            display.drawFilledCircle(position.x, position.y, 6, Color.FromArgb(40, 40, 40));
+            var screenPosition = toScreenPoint(position, worldScale, worldOffsetX, worldOffsetY);
+            display.drawCircle(screenPosition.x, screenPosition.y, toScreenSize(range, worldScale), Color.FromArgb(75, 255, 255, 255));
+            display.drawFilledCircle(screenPosition.x, screenPosition.y, toScreenSize(16, worldScale), Color.FromArgb(160, 90, 45));
+            display.drawFilledCircle(screenPosition.x, screenPosition.y, toScreenSize(6, worldScale), Color.FromArgb(40, 40, 40));
 
             if (activeProjectile != null && activeProjectile.getActive())
             {
-                activeProjectile.draw(display);
+                activeProjectile.draw(display, worldScale, worldOffsetX, worldOffsetY);
             }
+        }
+
+        private static int toScreenSize(double value, float worldScale)
+        {
+            return Math.Max(1, (int)MathF.Round((float)value * worldScale));
+        }
+
+        private static LPoint toScreenPoint(LPoint worldPoint, float worldScale, float worldOffsetX, float worldOffsetY)
+        {
+            return new LPoint()
+            {
+                x = (int)MathF.Round(worldOffsetX + (worldPoint.x * worldScale)),
+                y = (int)MathF.Round(worldOffsetY + (worldPoint.y * worldScale))
+            };
         }
 
         private Bloon getClosestTargetInRange(List<Bloon> bloons)
@@ -156,14 +171,18 @@ namespace Shard.Bloons
             yPos += (dy / distance) * stepDistance;
         }
 
-        public void draw(Display display)
+        public void draw(Display display, float worldScale = 1.0f, float worldOffsetX = 0.0f, float worldOffsetY = 0.0f)
         {
             if (!active)
             {
                 return;
             }
 
-            display.drawFilledCircle((int)xPos, (int)yPos, 4, Color.FromArgb(255, 40, 40));
+            display.drawFilledCircle(
+                (int)MathF.Round(worldOffsetX + ((float)xPos * worldScale)),
+                (int)MathF.Round(worldOffsetY + ((float)yPos * worldScale)),
+                Math.Max(1, (int)MathF.Round(4 * worldScale)),
+                Color.FromArgb(255, 40, 40));
         }
     }
 }

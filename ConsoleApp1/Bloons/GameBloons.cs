@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using SDL;
+using System.Drawing;
 
 namespace Shard;
 
@@ -12,6 +13,8 @@ class GameBloons : Game, InputListener
 {
     private const int AspectRatioWidth = 16;
     private const int AspectRatioHeight = 9;
+    
+    private System.Drawing.Color hudColor = System.Drawing.Color.FromArgb(255, 110, 74, 42);
     private GameObject background;
     private int mouseX;
     private int mouseY;
@@ -22,7 +25,7 @@ class GameBloons : Game, InputListener
     private bool isFullscreen = false;
     private readonly int screenWidth = 1920;
     private readonly int screenHeight = 1080;
-    private Image image;
+    private SixLabors.ImageSharp.Image image;
     private Map monkeyLane;
     private Monkey placedTower;
     private readonly List<Bloon> cachedBloons = new List<Bloon>();
@@ -38,6 +41,7 @@ class GameBloons : Game, InputListener
     public override void update()
     {
         var display = Bootstrap.getDisplay();
+        var worldScale = getWorldScale();
         display.showText("FPS: " + Bootstrap.getFPS(), 10, 10, 12, 255, 255, 255);
         display.showText($"Mouse: {mouseX}, {mouseY}", 10, 30, 12, 255, 255, 255);
         display.showText("Left Click: Place Tower", 10, 50, 12, 255, 255, 255);
@@ -46,6 +50,7 @@ class GameBloons : Game, InputListener
         display.showText($"Buttons: {bstate}", 10, 70, 12, 255, 255, 255);
 
         display.addToDraw(background);
+        drawRightSection(display);
         display.drawFilledCircle(mouseX, mouseY, 4, System.Drawing.Color.FromArgb(255, 255, 0));
 
         updateFullscreenState();
@@ -60,12 +65,12 @@ class GameBloons : Game, InputListener
             placedTower.update(cachedBloons, deltaTimeMs);
         }
 
-        renderBloons();
-        renderPathPoints(monkeyLane);
+        renderBloons(worldScale);
+        renderPathPoints(monkeyLane, worldScale);
 
         if (placedTower != null)
         {
-            placedTower.draw(display);
+            placedTower.draw(display, worldScale, background.Transform.X, background.Transform.Y);
         }
     }
 
@@ -88,7 +93,7 @@ class GameBloons : Game, InputListener
 
         using (var stream = File.OpenRead(getAssetManager().getAssetPath("Monkey_Lane_1390x1036.png")))
         {
-            image = Image.Load<Rgba32>(stream);
+            image = SixLabors.ImageSharp.Image.Load<Rgba32>(stream);
         }
 
         updateBackgroundScale();
@@ -141,7 +146,8 @@ class GameBloons : Game, InputListener
                     mouseLeft = true;
                     if (input.Y > 80)
                     {
-                        placedTower = new Monkey(new LPoint() { x = input.X, y = input.Y });
+                        var worldPosition = toWorldPoint(input.X, input.Y, getWorldScale());
+                        placedTower = new Monkey(worldPosition);
                     }
                 }
                 else if (input.Button == 3)
@@ -186,6 +192,12 @@ class GameBloons : Game, InputListener
             case "WindowResize":
                 applyAspectRatio(windowEvent.Width, windowEvent.Height);
                 updateBackgroundScale();
+                break;
+            case "WindowEnterFullscreen":
+                isFullscreen = true;
+                break;
+            case "WindowLeaveFullscreen":
+                isFullscreen = false;
                 break;
             case "WindowCloseRequested":
                 Environment.Exit(0);
@@ -275,16 +287,43 @@ class GameBloons : Game, InputListener
         }
     }
 
-    // for testing
-    public void renderPathPoints(Map map)
+    private void drawRightSection(Display display)
     {
-        foreach (LPoint point in map.Lane.getPath())
+        var sectionStartX = (int)MathF.Ceiling(background.Transform.X + (image.Width * background.Transform.Scalex));
+        var sectionEndX = display.getWidth();
+        var sectionHeight = display.getHeight();
+
+        if (sectionStartX >= sectionEndX)
         {
-            Bootstrap.getDisplay().drawFilledCircle(point.x, point.y, 5, System.Drawing.Color.FromArgb(255, 0, 255));
+            return;
+        }
+
+        for (var y = 0; y < sectionHeight; y += 1)
+        {
+            display.drawLine(
+                sectionStartX,
+                y,
+                sectionEndX,
+                y,
+                this.hudColor.R,
+                this.hudColor.G,
+                this.hudColor.B,
+                this.hudColor.A);
         }
     }
 
-    public void renderBloons()
+    // for testing
+    public void renderPathPoints(Map map, float worldScale)
+    {
+        foreach (LPoint point in map.Lane.getPath())
+        {
+            var screenPoint = toScreenPoint(point, worldScale);
+            var radius = Math.Max(1, (int)MathF.Round(5 * worldScale));
+            Bootstrap.getDisplay().drawFilledCircle(screenPoint.x, screenPoint.y, radius, System.Drawing.Color.FromArgb(255, 0, 255));
+        }
+    }
+
+    public void renderBloons(float worldScale)
     {
         Display display = Bootstrap.getDisplay();
         foreach (Bloon bloon in cachedBloons)
@@ -295,8 +334,53 @@ class GameBloons : Game, InputListener
             }
 
             var position = bloon.getPosition();
-            display.drawFilledCircle(position.x, position.y, bloon.getRenderRadius(), bloon.getRenderColor());
+            var screenPoint = toScreenPoint(position, worldScale);
+            var radius = Math.Max(1, (int)MathF.Round(bloon.getRenderRadius() * worldScale));
+            display.drawFilledCircle(screenPoint.x, screenPoint.y, radius, bloon.getRenderColor());
         }
+    }
+
+    private float getWorldScale()
+    {
+        if (image == null || image.Height == 0)
+        {
+            return 1.0f;
+        }
+
+        var baselineBackgroundScale = (float)screenHeight / image.Height;
+        if (baselineBackgroundScale <= 0)
+        {
+            return 1.0f;
+        }
+
+        return background.Transform.Scaley / baselineBackgroundScale;
+    }
+
+    private LPoint toScreenPoint(LPoint worldPoint, float worldScale)
+    {
+        var xOffset = background.Transform.X;
+        var yOffset = background.Transform.Y;
+        return new LPoint()
+        {
+            x = (int)MathF.Round(xOffset + (worldPoint.x * worldScale)),
+            y = (int)MathF.Round(yOffset + (worldPoint.y * worldScale))
+        };
+    }
+
+    private LPoint toWorldPoint(int screenX, int screenY, float worldScale)
+    {
+        if (worldScale <= 0)
+        {
+            return new LPoint() { x = screenX, y = screenY };
+        }
+
+        var xOffset = background.Transform.X;
+        var yOffset = background.Transform.Y;
+        return new LPoint()
+        {
+            x = (int)MathF.Round((screenX - xOffset) / worldScale),
+            y = (int)MathF.Round((screenY - yOffset) / worldScale)
+        };
     }
 
     private Map initializeMonkeyLane()
@@ -339,8 +423,23 @@ class GameBloons : Game, InputListener
             wave1.Bloons.Add(new Bloon( 3, 0.5, false, false, startX, startY, spawnDelayMs: i * wave1.spawnIntervalMs));
         }
 
+        // Wave 2 - yellow bloons (layer 4)
+        Map.Wave wave2 = new Map.Wave()
+        {
+            spawnIntervalMs = 500,
+            Bloons = new List<Bloon>()
+        };
+
+        var wave1DurationMs = 5 * wave1.spawnIntervalMs;
+        var wave2StartDelayMs = wave1DurationMs + 1000;
+        for (int i = 1; i <= 20; i++)
+        {
+            wave2.Bloons.Add(new Bloon(4, 0.5, false, false, startX, startY, spawnDelayMs: wave2StartDelayMs + (i * wave2.spawnIntervalMs)));
+        }
+
         List<Map.Wave> waves = new List<Map.Wave>();
         waves.Add(wave1);
+        waves.Add(wave2);
 
         return new Map(lane, waves);
     }
