@@ -26,7 +26,7 @@ namespace Shard.Bloons
             return "Monkey";
         }
 
-        public override void update(List<Bloon> bloons, double deltaMs, LPoint pointerWorldPosition)
+        public override void update(List<Bloon> bloons, double deltaMs, LPoint pointerWorldPosition, Player owner)
         {
             if (shotCooldownRemainingMs > 0)
             {
@@ -35,7 +35,7 @@ namespace Shard.Bloons
 
             if (activeProjectile != null)
             {
-                activeProjectile.update(deltaMs);
+                activeProjectile.update(deltaMs, owner);
                 if (!activeProjectile.getActive())
                 {
                     activeProjectile = null;
@@ -95,14 +95,14 @@ namespace Shard.Bloons
             return active;
         }
 
-        public void update(double deltaMs)
+        public void update(double deltaMs, Player owner)
         {
             if (!active)
             {
                 return;
             }
 
-            if (!target.isTargetable())
+            if (!target.getIsTargetable())
             {
                 active = false;
                 return;
@@ -118,6 +118,7 @@ namespace Shard.Bloons
             if (distance <= hitDistance || distance <= stepDistance)
             {
                 target.pop(damage);
+                owner.addMoney(damage);
                 active = false;
                 return;
             }

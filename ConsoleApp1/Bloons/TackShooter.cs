@@ -34,7 +34,7 @@ namespace Shard.Bloons
             return "Tack Shooter";
         }
 
-        public override void update(List<Bloon> bloons, double deltaMs, LPoint pointerWorldPosition)
+        public override void update(List<Bloon> bloons, double deltaMs, LPoint pointerWorldPosition, Player player)
         {
             if (shotCooldownRemainingMs > 0)
             {
@@ -190,7 +190,7 @@ namespace Shard.Bloons
 
             foreach (var bloon in bloons)
             {
-                if (!bloon.isTargetable())
+                if (!bloon.getIsTargetable())
                 {
                     continue;
                 }

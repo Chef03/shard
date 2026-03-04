@@ -8,8 +8,15 @@ namespace Shard.Bloons
 {
     internal struct LPoint // Changed from private to internal
     {
+        public LPoint()
+        {
+        }
+
         public int x { get; set; }
         public int y { get; set; }
+        
+        public bool tunnelStart { get; set; } = false;
+        public bool tunnelEnd { get; set; } = false;
     }
 
 

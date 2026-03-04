@@ -32,6 +32,9 @@ class GameBloons : Game, InputListener
     private readonly List<Tower> placedTowers = new List<Tower>();
     private readonly List<TowerOption> placeableTowers = new List<TowerOption>();
     private int selectedTowerIndex;
+    private List<Player> players = new List<Player>();
+    private int currentPlayerID = 0; 
+    private bool gameover = false;
 
     private SoundManager soundManager;
     private unsafe MIX_Track* track;
@@ -63,6 +66,12 @@ class GameBloons : Game, InputListener
         display.showText($"Selected Tower: {selectedTowerName}", 10, 50, 12, 255, 255, 255);
         display.showText("Left Click HUD: Select | Left Click Map: Place", 10, 70, 12, 255, 255, 255);
 
+        string moneyText = $"$ {players[currentPlayerID].getMoney()}";
+        string livesText = $"<3 {players[currentPlayerID].getLives()}";
+        int centerX = display.getWidth() / 2;
+        display.showText(moneyText, centerX - 60, 10, 16, 255, 215, 0);   // gold
+        display.showText(livesText, centerX + 20, 10, 16, 255, 50, 50);  // red
+
         string bstate = (mouseLeft ? "L" : "-") + (mouseRight ? "R" : "-");
         display.showText($"Buttons: {bstate}", 10, 90, 12, 255, 255, 255);
 
@@ -80,7 +89,7 @@ class GameBloons : Game, InputListener
 
         foreach (var tower in placedTowers)
         {
-            tower.update(cachedBloons, deltaTimeMs, pointerWorldPosition);
+            tower.update(cachedBloons, deltaTimeMs, pointerWorldPosition, players[currentPlayerID]);
         }
 
         renderBloons(worldScale);
@@ -89,6 +98,14 @@ class GameBloons : Game, InputListener
         foreach (var tower in placedTowers)
         {
             tower.draw(display, worldScale, background.Transform.X, background.Transform.Y);
+        }
+
+        foreach (Player player in players)
+        {
+            if(player.getLives() <= 0)
+            {
+                gameover = true;
+            }
         }
     }
 
@@ -101,9 +118,9 @@ class GameBloons : Game, InputListener
         
         unsafe
         {
-             var track = Bootstrap.getSound().playSound ("Sunshine Serenade.mp3", true, 10, 10);
-             Bootstrap.getSound().setVolumePercent(track, 1);
-             Console.WriteLine("Track: " + track->ToString());
+             var track = Bootstrap.getSound().playSound("Sunshine Serenade.mp3", true, 10, 10);
+                Bootstrap.getSound().setVolumePercent(track, soundManager.getVolumePercent());
+            Console.WriteLine("Track: " + track->ToString());
              this.track = track;
         }
         
@@ -127,6 +144,8 @@ class GameBloons : Game, InputListener
 
         // Initialize map 1: Monkey lane
         monkeyLane = initializeMonkeyLane();
+
+        players.Add(new Player(0, "bruh", true, ""));
     }
 
     public void handleInput(InputEvent input, string eventType)
@@ -313,11 +332,37 @@ class GameBloons : Game, InputListener
 
         foreach (Map.Wave wave in map.Waves)
         {
-            foreach (Bloon bloon in wave.Bloons)
+            for(int i =0; i< wave.Bloons.Count - 1; i++)
             {
+                //update each bloon
+                Bloon bloon = wave.Bloons[i];
                 bloon.updateBloon(map.Lane.getPath(), deltaTimeMs);
-                cachedBloons.Add(bloon);
+                if (bloon.getEnd())
+                {
+                    players[currentPlayerID].loseLives(bloon.getLayer());
+
+                }
+                if (bloon.getPopped() || bloon.getEnd())
+                {
+                    wave.Bloons.RemoveAt(i);
+                }
+                else
+                {
+                    cachedBloons.Add(bloon);
+
+                }
+                
+
             }
+            //foreach (Bloon bloon in wave.Bloons)
+            //{
+            //    bloon.updateBloon(map.Lane.getPath(), deltaTimeMs);
+            //    if (!bloon.getPopped())
+            //    {
+            //        cachedBloons.Add(bloon);
+            //    }
+
+            //}
         }
     }
 
@@ -501,7 +546,7 @@ class GameBloons : Game, InputListener
         Display display = Bootstrap.getDisplay();
         foreach (Bloon bloon in cachedBloons)
         {
-            if (!bloon.isTargetable())
+            if (!bloon.getIsTargetable() || !bloon.getActive())
             {
                 continue;
             }
@@ -561,21 +606,25 @@ class GameBloons : Game, InputListener
         List<LPoint> path = new List<LPoint>()
         {
             new LPoint() { x = 0,    y = 635  },
-            new LPoint() { x = 345,  y = 622  },
-            new LPoint() { x = 361,  y = 475  },
-            new LPoint() { x = 588,  y = 479  },
-            new LPoint() { x = 600,  y = 1018 },
+            new LPoint() { x = 350,  y = 630  },
+            new LPoint() { x = 350,  y = 475  },
+            new LPoint() { x = 590,  y = 475  },
+            new LPoint() { x = 590,  y = 1015 },
             new LPoint() { x = 940,  y = 1015 },
-            new LPoint() { x = 936,  y = 319  },
-            new LPoint() { x = 352,  y = 288  },
-            new LPoint() { x = 356,  y = 141  },
-            new LPoint() { x = 1125, y = 146  },
-            new LPoint() { x = 1137, y = 286  },
-            new LPoint() { x = 1334, y = 307  },
+            new LPoint() { x = 940,  y = 950, tunnelStart = true}, //tunnel 
+            new LPoint() { x = 940,  y = 648, tunnelEnd = true}, //tunnel 
+            new LPoint() { x = 940,  y = 305  },
+            new LPoint() { x = 352,  y = 291  },
+            new LPoint() { x = 352,  y = 136  },
+            new LPoint() { x = 1128, y = 136  },
+            new LPoint() { x = 1128, y = 286  },
+            new LPoint() { x = 1334, y = 286  },
             new LPoint() { x = 1334, y = 473  },
-            new LPoint() { x = 1141, y = 499  },
-            new LPoint() { x = 1117, y = 785  },
-            new LPoint() { x = 354,  y = 821  },
+            new LPoint() { x = 1135, y = 473  },
+            new LPoint() { x = 1135, y = 795  },
+            new LPoint() { x = 754,  y = 795, tunnelStart = true }, //tunnel 
+            new LPoint() { x = 427,  y = 814, tunnelEnd = true }, //tunnel 
+            new LPoint() { x = 347,  y = 829  },
             new LPoint() { x = 347,  y = 1080 }
         };
 
@@ -593,7 +642,7 @@ class GameBloons : Game, InputListener
 
         for (int i = 1; i < 6; i++)
         {
-            wave1.Bloons.Add(new Bloon( 3, 0.5, false, false, startX, startY, spawnDelayMs: i * wave1.spawnIntervalMs));
+            wave1.Bloons.Add(new Bloon( 3, false, false, startX, startY, spawnDelayMs: i * wave1.spawnIntervalMs));
         }
 
         // Wave 2 - yellow bloons (layer 4)
@@ -607,7 +656,7 @@ class GameBloons : Game, InputListener
         var wave2StartDelayMs = wave1DurationMs + 1000;
         for (int i = 1; i <= 20; i++)
         {
-            wave2.Bloons.Add(new Bloon(4, 0.5, false, false, startX, startY, spawnDelayMs: wave2StartDelayMs + (i * wave2.spawnIntervalMs)));
+            wave2.Bloons.Add(new Bloon(4, false, false, startX, startY, spawnDelayMs: wave2StartDelayMs + (i * wave2.spawnIntervalMs)));
         }
 
         List<Map.Wave> waves = new List<Map.Wave>();

@@ -6,7 +6,7 @@ namespace Shard;
 class SoundManager
 {
     
-    private int volumePercent = 20;
+    private int volumePercent = 1;
     private const int VolumeTopMargin = 24;
     private const int VolumeRightMargin = 24;
     private const int VolumeTrackWidth = 170;
@@ -115,4 +115,8 @@ class SoundManager
         Bootstrap.getSound().setVolumePercent(track, volumePercent);
     }
 
+    public int getVolumePercent()
+    {
+        return volumePercent;
+    }
 }

@@ -13,7 +13,7 @@ namespace Shard.Bloons
         }
 
         public abstract string getName();
-        public abstract void update(List<Bloon> bloons, double deltaMs, LPoint pointerWorldPosition);
+        public abstract void update(List<Bloon> bloons, double deltaMs, LPoint pointerWorldPosition, Player owner);
         public abstract void draw(Display display, float worldScale = 1.0f, float worldOffsetX = 0.0f, float worldOffsetY = 0.0f);
 
         protected static int toScreenSize(double value, float worldScale)
@@ -38,7 +38,7 @@ namespace Shard.Bloons
 
             foreach (var bloon in bloons)
             {
-                if (!bloon.isTargetable())
+                if (!bloon.getIsTargetable())
                 {
                     continue;
                 }

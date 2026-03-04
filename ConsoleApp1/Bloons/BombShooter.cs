@@ -36,7 +36,7 @@ namespace Shard.Bloons
             return "Bomb Shooter";
         }
 
-        public override void update(List<Bloon> bloons, double deltaMs, LPoint pointerWorldPosition)
+        public override void update(List<Bloon> bloons, double deltaMs, LPoint pointerWorldPosition, Player owner)
         {
             if (shotCooldownRemainingMs > 0)
             {
@@ -172,7 +172,7 @@ namespace Shard.Bloons
             var blastRadiusSq = blastRadius * blastRadius;
             foreach (var bloon in bloons)
             {
-                if (!bloon.isTargetable())
+                if (!bloon.getIsTargetable())
                 {
                     continue;
                 }

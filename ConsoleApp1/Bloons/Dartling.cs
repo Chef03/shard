@@ -38,7 +38,7 @@ namespace Shard.Bloons
             return "Dartling";
         }
 
-        public override void update(List<Bloon> bloons, double deltaMs, LPoint pointerWorldPosition)
+        public override void update(List<Bloon> bloons, double deltaMs, LPoint pointerWorldPosition, Player owner)
         {
             updateAim(pointerWorldPosition);
 
@@ -160,7 +160,7 @@ namespace Shard.Bloons
 
             foreach (var bloon in bloons)
             {
-                if (!bloon.isTargetable())
+                if (!bloon.getIsTargetable())
                 {
                     continue;
                 }
