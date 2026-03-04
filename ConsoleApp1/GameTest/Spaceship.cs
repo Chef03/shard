@@ -56,7 +56,10 @@ namespace GameTest
 
             b.Transform.rotate(this.Transform.Rotz);
 
-            Bootstrap.getSound().playSound ("fire.wav");
+            unsafe
+            {
+                Bootstrap.getSound().playSound ("fire.wav");
+            }
         }
 
         public void handleInput(InputEvent inp, string eventType)
@@ -121,6 +124,11 @@ namespace GameTest
                     fireBullet();
                 }
             }
+        }
+        
+        public void handleWindowEvent(WindowEvent windowEvent, string eventType)
+        {
+        
         }
 
         public override void physicsUpdate()

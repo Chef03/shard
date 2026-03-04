@@ -27,9 +27,11 @@ namespace GameBreakout
         public void handleInput(InputEvent inp, string eventType)
         {
 
+        }
 
-
-
+        public void handleWindowEvent(WindowEvent windowEvent, string eventType)
+        {
+            
         }
 
 

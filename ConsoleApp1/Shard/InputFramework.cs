@@ -25,6 +25,7 @@ namespace Shard
             SDL_Event ev;
             bool hasEvent;
             InputEvent ie;
+            WindowEvent window;
 
             tick += Bootstrap.getDeltaTime();
 
@@ -45,6 +46,7 @@ namespace Shard
                 }
 
                 ie = new InputEvent();
+                window = new WindowEvent();
 
                 if ((SDL_EventType)ev.type == SDL_EventType.SDL_EVENT_MOUSE_MOTION)
                 {
@@ -110,11 +112,36 @@ namespace Shard
                     informListeners(ie, "KeyUp");
                 }
 
+                //handle close window button
+                if ((SDL_EventType)ev.type == SDL_EventType.SDL_EVENT_WINDOW_CLOSE_REQUESTED)
+                {
+                    window.CloseRequested = true;
+                    informListeners(window, "WindowCloseRequested");
+                }
+
+                
+                if ((SDL_EventType)ev.type == SDL_EventType.SDL_EVENT_WINDOW_RESIZED)
+                {
+                    window.Width = (int)ev.window.data1;
+                    window.Height = (int)ev.window.data2;
+                    informListeners(window, "WindowResize");
+                }
+
+                if ((SDL_EventType)ev.type == SDL_EventType.SDL_EVENT_WINDOW_ENTER_FULLSCREEN)
+                {
+                    informListeners(window, "WindowEnterFullscreen");
+                }
+
+                if ((SDL_EventType)ev.type == SDL_EventType.SDL_EVENT_WINDOW_LEAVE_FULLSCREEN)
+                {
+                    informListeners(window, "WindowLeaveFullscreen");
+                }
+               
+
                 tick -= timeInterval;
 
             }
-
-
+            
         }
 
         public override void initialize()

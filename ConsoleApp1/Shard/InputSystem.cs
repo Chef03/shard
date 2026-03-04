@@ -39,9 +39,20 @@ namespace Shard
             myListeners.Remove(il);
         }
 
-        public void informListeners(InputEvent ie, string eventType)
+        public void informListeners(IEvents e, string eventType)
         {
+
+            // determine the type of event and call the appropriate handler on the listeners
+            string type = null;
             InputListener il;
+            if (e is InputEvent)
+            {
+                type = "InputEvent";
+            }else if (e is WindowEvent)
+            {
+                type = "WindowEvent";
+            }
+            
             for (int i = 0; i < myListeners.Count; i++)
             {
                 il = myListeners[i];
@@ -51,7 +62,18 @@ namespace Shard
                     continue;
                 }
 
-                il.handleInput(ie, eventType);
+                switch (type)
+                {
+                    case "InputEvent":
+                        il.handleInput((InputEvent)e, eventType);
+                        break;
+                    case "WindowEvent":
+                        il.handleWindowEvent((WindowEvent)e, eventType);
+                        break;
+                    default:
+                        Debug.Log("Unknown event type: " + type);
+                        break;
+                }
             }
         }
         public abstract void getInput();

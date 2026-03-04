@@ -92,5 +92,10 @@ namespace GameTest
         {
             return "Asteroid: [" + Transform.X + ", " + Transform.Y + ", " + Transform.Wid + ", " + Transform.Ht + "]";
         }
+        
+        public void handleWindowEvent(WindowEvent windowEvent, string eventType)
+        {
+        
+        }
     }
 }
