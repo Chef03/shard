@@ -16,10 +16,11 @@ namespace Shard.Bloons
         public TackShooter(
             LPoint position,
             int damage = 1,
+            int cost = 260,
             double attackSpeedPerSecond = 1.1,
             double projectileSpeedPixelsPerSecond = 980,
             double projectileLifetimeMs = 520)
-            : base(position)
+            : base(position, cost)
         {
             this.damage = damage;
             this.attackCooldownMs = 1000.0 / attackSpeedPerSecond;

@@ -18,10 +18,11 @@ namespace Shard.Bloons
             LPoint position,
             double range = 280,
             int damage = 1,
+            int cost = 375,
             double blastRadius = 95,
             double attackSpeedPerSecond = 0.9,
             double projectileSpeedPixelsPerSecond = 750)
-            : base(position)
+            : base(position, cost)
         {
             this.range = range;
             this.damage = damage;
