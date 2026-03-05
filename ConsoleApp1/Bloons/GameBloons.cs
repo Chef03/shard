@@ -1,10 +1,11 @@
+using SDL;
 using Shard.Bloons;
 using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using SDL;
 using System.Drawing;
+using System.IO;
+using static Shard.Bloons.Map;
 
 namespace Shard;
 
@@ -35,6 +36,11 @@ class GameBloons : Game, InputListener
     private List<Player> players = new List<Player>();
     private int currentPlayerID = 0; 
     private bool gameover = false;
+    private int currentWaveNumber = 0;
+    private Map.Wave currentWave;
+    private bool gameWin = false;
+    private double waveElapsedTimeMs = 0;
+    private int lives = 100;
 
     private SoundManager soundManager;
     private unsafe MIX_Track* track;
@@ -42,7 +48,14 @@ class GameBloons : Game, InputListener
     private sealed class TowerOption
     {
         public string Name { get; }
-        public Func<LPoint, Tower> CreateTower { get; }
+        public Func<LPoint,Tower> CreateTower { get; }
+
+        public int getCost()
+        {
+            var tempTower = CreateTower(new LPoint() { x = 0, y = 0 });
+            return tempTower.getCost();
+
+        }
 
         public TowerOption(string name, Func<LPoint, Tower> createTower)
         {
@@ -67,10 +80,13 @@ class GameBloons : Game, InputListener
         display.showText("Left Click HUD: Select | Left Click Map: Place", 10, 70, 12, 255, 255, 255);
 
         string moneyText = $"$ {players[currentPlayerID].getMoney()}";
-        string livesText = $"<3 {players[currentPlayerID].getLives()}";
+        //string livesText = $"<3 {players[currentPlayerID].getLives()}";
+        string livesText = $"Lives: {lives}";
+        string waveText = $"Wave: {currentWaveNumber + 1}/{monkeyLane.Waves.Count}";
         int centerX = display.getWidth() / 2;
         display.showText(moneyText, centerX - 60, 10, 16, 255, 215, 0);   // gold
         display.showText(livesText, centerX + 20, 10, 16, 255, 50, 50);  // red
+        display.showText(waveText, centerX + 150, 10, 16, 255, 255, 255);  // red
 
         string bstate = (mouseLeft ? "L" : "-") + (mouseRight ? "R" : "-");
         display.showText($"Buttons: {bstate}", 10, 90, 12, 255, 255, 255);
@@ -84,7 +100,9 @@ class GameBloons : Game, InputListener
         soundManager.drawVolumeSlider();
 
         double deltaTimeMs = Bootstrap.getDeltaTime() * 1000;
-        updateBloons(monkeyLane, deltaTimeMs);
+        spawnBloons(monkeyLane, deltaTimeMs, currentWaveNumber);
+        //updateBloons(monkeyLane, deltaTimeMs);
+
         var pointerWorldPosition = toWorldPoint(mouseX, mouseY, worldScale);
 
         foreach (var tower in placedTowers)
@@ -105,7 +123,13 @@ class GameBloons : Game, InputListener
             if(player.getLives() <= 0)
             {
                 gameover = true;
+                Debug.Log("You lost all your lives! Game over!");
             }
+        }
+
+        if (gameWin)
+        {
+            Debug.Log("You survived all the waves! You win!");
         }
     }
 
@@ -135,11 +159,11 @@ class GameBloons : Game, InputListener
         updateBackgroundScale();
 
         // Only works on 1920x1080 displays for now
-
-        placeableTowers.Add(new TowerOption("Monkey", position => new Monkey(position)));
+        placeableTowers.Add(new TowerOption("Dart Monkey", position => new Monkey(position)));
         placeableTowers.Add(new TowerOption("Dartling", position => new Dartling(position)));
         placeableTowers.Add(new TowerOption("Bomb Shooter", position => new BombShooter(position)));
         placeableTowers.Add(new TowerOption("Tack Shooter", position => new TackShooter(position)));
+        placeableTowers.Add(new TowerOption("Super Monkey", position => new SuperMonkey(position)));
         selectedTowerIndex = 0;
 
         // Initialize map 1: Monkey lane
@@ -199,7 +223,14 @@ class GameBloons : Game, InputListener
                         if (selectedTower != null)
                         {
                             var worldPosition = toWorldPoint(input.X, input.Y, getWorldScale());
-                            placedTowers.Add(selectedTower.CreateTower(worldPosition));
+                            if (players[currentPlayerID].getMoney() >= selectedTower.getCost())
+                            {
+                                players[currentPlayerID].removeMoney(selectedTower.getCost());
+                                placedTowers.Add(selectedTower.CreateTower(worldPosition));
+                            }
+                            else
+                            {
+                            }
                         }
                     }
                 }
@@ -325,45 +356,48 @@ class GameBloons : Game, InputListener
 
         display.setSize(adjustedWidth, adjustedHeight);
     }
+    private void spawnBloons(Map map, double deltaTimeMs, int waveIndex)
+    {
+        currentWave = map.Waves[waveIndex];
+        updateBloons(currentWave, deltaTimeMs);
+        if (map.Waves[map.Waves.Count - 1].Bloons.Count == 0 && lives > 0)
+        {
+            gameWin = true;
+        }
 
-    private void updateBloons(Map map, double deltaTimeMs)
+
+    }
+    private void updateBloons(Map.Wave wave, double deltaTimeMs)
     {
         cachedBloons.Clear();
-
-        foreach (Map.Wave wave in map.Waves)
+        waveElapsedTimeMs += deltaTimeMs;
+        Debug.Log(wave.Bloons.Count.ToString());
+        for (int i = wave.Bloons.Count - 1; i >= 0; i--)
         {
-            for(int i =0; i< wave.Bloons.Count - 1; i++)
+            Bloon bloon = wave.Bloons[i];
+            bloon.updateBloon(monkeyLane.Lane.getPath(), deltaTimeMs, waveElapsedTimeMs);
+
+            if (bloon.getEnd())
             {
-                //update each bloon
-                Bloon bloon = wave.Bloons[i];
-                bloon.updateBloon(map.Lane.getPath(), deltaTimeMs);
-                if (bloon.getEnd())
-                {
-                    players[currentPlayerID].loseLives(bloon.getLayer());
-
-                }
-                if (bloon.getPopped() || bloon.getEnd())
-                {
-                    wave.Bloons.RemoveAt(i);
-                }
-                else
-                {
-                    cachedBloons.Add(bloon);
-
-                }
-                
-
+                lives -= bloon.getLayer(); //maybe change live to shared
             }
-            //foreach (Bloon bloon in wave.Bloons)
-            //{
-            //    bloon.updateBloon(map.Lane.getPath(), deltaTimeMs);
-            //    if (!bloon.getPopped())
-            //    {
-            //        cachedBloons.Add(bloon);
-            //    }
 
-            //}
+            if (bloon.getPopped() || bloon.getEnd())
+            {
+                wave.Bloons.RemoveAt(i);
+            }
+            else
+            {
+                cachedBloons.Add(bloon);
+            }
         }
+
+        if (wave.Bloons.Count == 0 && currentWaveNumber < monkeyLane.Waves.Count - 1)
+        {
+            currentWaveNumber++;
+            waveElapsedTimeMs = 0;
+        }
+        
     }
 
     private void drawRightSection(Display display)
@@ -424,7 +458,17 @@ class GameBloons : Game, InputListener
             drawFilledRect(display, slotX, slotY, slotWidth, HudSlotHeight, slotColor);
             drawRectOutline(display, slotX, slotY, slotWidth, HudSlotHeight, Color.FromArgb(255, 245, 236, 223));
 
+            Tower temp = placeableTowers[i].CreateTower(new LPoint() { x = 0, y = 0 });
             display.showText(placeableTowers[i].Name, slotX + 14, slotY + 16, 17, 255, 255, 255);
+            if(temp.getCost() > players[currentPlayerID].getMoney())
+            {
+                display.showText(temp.getCost().ToString(), slotX + 200, slotY + 16, 17, 255, 0, 0);
+            }
+            else
+            {
+                display.showText(temp.getCost().ToString(), slotX + 200, slotY + 16, 17, 255, 255, 255);
+            }
+
             display.showText(isSelected ? "Selected" : "Click to select", slotX + 14, slotY + 44, 12, 255, 255, 255);
         }
     }
@@ -640,7 +684,7 @@ class GameBloons : Game, InputListener
             Bloons = new List<Bloon>()
         };
 
-        for (int i = 1; i < 6; i++)
+        for (int i = 1; i <= 5; i++)
         {
             wave1.Bloons.Add(new Bloon( 3, false, false, startX, startY, spawnDelayMs: i * wave1.spawnIntervalMs));
         }
@@ -652,11 +696,11 @@ class GameBloons : Game, InputListener
             Bloons = new List<Bloon>()
         };
 
-        var wave1DurationMs = 5 * wave1.spawnIntervalMs;
-        var wave2StartDelayMs = wave1DurationMs + 1000;
+        //var wave1DurationMs = 5 * wave1.spawnIntervalMs;
+        //var wave2StartDelayMs = wave1DurationMs + 1000;
         for (int i = 1; i <= 20; i++)
         {
-            wave2.Bloons.Add(new Bloon(4, false, false, startX, startY, spawnDelayMs: wave2StartDelayMs + (i * wave2.spawnIntervalMs)));
+            wave2.Bloons.Add(new Bloon(4, false, false, startX, startY, spawnDelayMs: i * wave2.spawnIntervalMs));
         }
 
         List<Map.Wave> waves = new List<Map.Wave>();

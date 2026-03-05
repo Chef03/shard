@@ -8,7 +8,7 @@ namespace Shard.Bloons
 {
     internal class Player
     {
-        private int lives;
+        //private int lives;
         private int money;
         private List<Monkey> monkeys;
         private int playerID;
@@ -23,7 +23,7 @@ namespace Shard.Bloons
             this.name = name;
             this.isHost = isHost;
             this.IPAddress = IPAddress;
-            this.lives = 100; // default starting lives
+            //this.lives = 100; // default starting lives
             this.money = 3000; // default starting money
             this.monkeys = new List<Monkey>();
             this.isConnected = false; // assume player is connected when created
@@ -34,10 +34,10 @@ namespace Shard.Bloons
             return money;
         }
 
-        public int getLives()
-        {
-            return lives;
-        }
+        //public int getLives()
+        //{
+        //    return lives;
+        //}
 
         public void addMoney(int n)
         {
@@ -48,10 +48,10 @@ namespace Shard.Bloons
             money -= n;
         }
 
-        public void loseLives(int n)
-        {
-            lives -= n;
-        }
+        //public void loseLives(int n)
+        //{
+        //    lives -= n;
+        //}
 
     }
 }
