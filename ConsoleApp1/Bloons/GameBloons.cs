@@ -20,6 +20,7 @@ class GameBloons : Game, InputListener
     private const int HudBaseSlotGap = 12;
     private const int HudBaseSlotTop = 90;
     private readonly Color hudColor = Color.FromArgb(255, 110, 74, 42);
+    private readonly MultiplayerSession multiplayerSession;
     private GameObject background;
     private int mouseX;
     private int mouseY;
@@ -47,6 +48,15 @@ class GameBloons : Game, InputListener
 
     private SoundManager soundManager;
     private unsafe MIX_Track* track;
+
+    public GameBloons() : this(MultiplayerSession.Offline())
+    {
+    }
+
+    public GameBloons(MultiplayerSession multiplayerSession)
+    {
+        this.multiplayerSession = multiplayerSession;
+    }
 
     private sealed class TowerOption
     {
@@ -192,8 +202,7 @@ class GameBloons : Game, InputListener
         Bootstrap.getDisplay().setSDLSize(screenWidth, screenHeight);
 
         soundManager = new SoundManager();
-//        var network = new Network();
-        new Thread(Network.client).Start();
+        initializeMultiplayerSession();
         
         unsafe
         {
@@ -224,12 +233,31 @@ class GameBloons : Game, InputListener
         // Initialize map 1: Monkey lane
         monkeyLane = initializeMonkeyLane();
 
-        players.Add(new Player(0, "bruh", true, ""));
-        
-        /*
-        Network.setHost(players[currentPlayerID]);
-        new Thread(Network.startServer).Start();
-        */
+        players.Add(new Player(0, multiplayerSession.PlayerName, multiplayerSession.Role == MultiplayerRole.Host, multiplayerSession.ServerIp));
+    }
+
+    private void initializeMultiplayerSession()
+    {
+        if (multiplayerSession.Role == MultiplayerRole.Host)
+        {
+            Network.setHost(new Player(0, multiplayerSession.PlayerName, true, multiplayerSession.ServerIp));
+            startBackgroundThread(() => Network.startServer(multiplayerSession.ServerPort));
+            return;
+        }
+
+        if (multiplayerSession.Role == MultiplayerRole.Join)
+        {
+            startBackgroundThread(() => Network.connectToServer(multiplayerSession.ServerIp, multiplayerSession.ServerPort, multiplayerSession.PlayerName));
+        }
+    }
+
+    private static void startBackgroundThread(ThreadStart threadStart)
+    {
+        var thread = new Thread(threadStart)
+        {
+            IsBackground = true
+        };
+        thread.Start();
     }
 
     public void handleInput(InputEvent input, string eventType)
@@ -431,7 +459,7 @@ class GameBloons : Game, InputListener
     {
         cachedBloons.Clear();
         waveElapsedTimeMs += deltaTimeMs;
-        Debug.Log(wave.Bloons.Count.ToString());
+        // Debug.Log(wave.Bloons.Count.ToString());
         for (int i = wave.Bloons.Count - 1; i >= 0; i--)
         {
             Bloon bloon = wave.Bloons[i];
