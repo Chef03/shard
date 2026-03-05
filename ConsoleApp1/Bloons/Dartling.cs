@@ -18,10 +18,11 @@ namespace Shard.Bloons
         public Dartling(
             LPoint position,
             int damage = 1,
+            int cost = 850,
             double attackSpeedPerSecond = 2,
             double projectileSpeedPixelsPerSecond = 1200,
             double projectileLifetimeMs = 1200)
-            : base(position)
+            : base(position, cost)
         {
             this.damage = damage;
             this.attackCooldownMs = 1000.0 / attackSpeedPerSecond;

@@ -12,8 +12,8 @@ namespace Shard.Bloons
         private double shotCooldownRemainingMs;
         private TrackingProjectile activeProjectile;
 
-        public Monkey(LPoint position, double range = 230, int damage = 1, double attackSpeedPerSecond = 1.7)
-            : base(position)
+        public Monkey(LPoint position, double range = 230, int damage = 1, double attackSpeedPerSecond = 1.7, int cost = 200)
+            : base(position, cost)
         {
             this.range = range;
             this.damage = damage;
@@ -23,7 +23,7 @@ namespace Shard.Bloons
 
         public override string getName()
         {
-            return "Monkey";
+            return "Dart Monkey";
         }
 
         public override void update(List<Bloon> bloons, double deltaMs, LPoint pointerWorldPosition, Player owner)

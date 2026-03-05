@@ -35,7 +35,6 @@ namespace Shard.Bloons
         private readonly bool regrow;
 
         private readonly double spawnDelayMs; // ms to wait before starting to move
-        private double elapsedTime = 0;
         private bool active = false; // only moves when active
         private bool end = false; //reach the end
         private bool popped = false;
@@ -80,7 +79,7 @@ namespace Shard.Bloons
 
         private unsafe void popSound()
         {
-            var track = Bootstrap.getSound().playSound ("pop.mp3", false, 10, 10, 5);
+            var track = Bootstrap.getSound().playSound ("pop.mp3", false, 10, 10, 50);
         }
 
         //public bool isTargetable()
@@ -159,7 +158,7 @@ namespace Shard.Bloons
             xPos += (dx / distance) * speed;
             yPos += (dy / distance) * speed;
         }
-        public void updateBloon(List<LPoint> path, double deltaMs)
+        public void updateBloon(List<LPoint> path, double deltaMs, double waveElapsedTime)
         {
             if (popped || end)
             {
@@ -167,8 +166,7 @@ namespace Shard.Bloons
                 return;
             }
 
-            elapsedTime += deltaMs;
-            if (elapsedTime >= spawnDelayMs)
+            if (waveElapsedTime >= spawnDelayMs)
             {
                 active = true;
             }

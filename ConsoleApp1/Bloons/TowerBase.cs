@@ -6,10 +6,16 @@ namespace Shard.Bloons
     internal abstract class TowerBase : Tower
     {
         protected readonly LPoint position;
+        private int cost;
 
-        protected TowerBase(LPoint position)
+        protected TowerBase(LPoint position, int cost)
         {
             this.position = position;
+            this.cost = cost;
+        }
+        public int getCost()
+        {
+            return cost;
         }
 
         public abstract string getName();
