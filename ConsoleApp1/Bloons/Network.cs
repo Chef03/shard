@@ -2,11 +2,17 @@ using LiteNetLib;
 using LiteNetLib.Utils;
 using System;
 using System.Threading;
+using Shard.Bloons;
 
 namespace Shard;
 
-public class Network
+internal class Network
 {
+
+    public string ip;
+    private static Player host;
+    private Player peer;
+    private Map map;
 
     public Network()
     {
@@ -21,7 +27,10 @@ public class Network
 
         listener.NetworkReceiveEvent += (fromPeer, dataReader, deliveryMethod, channel) =>
         {
-            Console.WriteLine(dataReader.GetString(1000));
+            //Console.WriteLine(dataReader.GetString(1000));
+            Console.WriteLine("Got a message");
+            Player data = dataReader.Get(() => new Player());
+            Console.WriteLine(data.getName());
             dataReader.Recycle();
         };
 
@@ -37,7 +46,11 @@ public class Network
         {
             Console.WriteLine("We got connection: {0}", peer); // Show peer IP
             var writer = new NetDataWriter(); // Create writer class
-            writer.Put("Hello client!"); // Put some string
+            //writer.Put("Hello client"); // Put some string
+            if (host != null)
+            {
+                writer.Put(host);
+            }
             peer.Send(writer, DeliveryMethod.ReliableOrdered); // Send with reliability
         };
         
@@ -55,10 +68,12 @@ public class Network
         var listener = new EventBasedNetListener();
         var client = new NetManager(listener);
         client.Start();
-        client.Connect("127.0.0.1" /* host IP or name */, 9050 /* port */, "SomeConnectionKey" /* text key or NetDataWriter */);
+        client.Connect("172.20.10.3" /* host IP or name */, 9050 /* port */, "SomeConnectionKey" /* text key or NetDataWriter */);
         listener.NetworkReceiveEvent += (fromPeer, dataReader, deliveryMethod, channel) =>
         {
-            Console.WriteLine("We got: {0}", dataReader.GetString(100 /* max length of string */));
+            Player data = dataReader.Get(() => new Player());
+            
+            Console.WriteLine("We got: {0}",  data.getName());
             dataReader.Recycle();
         };
 
@@ -67,10 +82,8 @@ public class Network
             Console.WriteLine("Connected to server!, sending message...");
             var server = peer;;
             var writer = new NetDataWriter();
-
-
-            string test = "hello world";
-            writer.Put(test);
+            writer.Put(new Player(3424, "jeffrey", true, "432872"));
+            
             server.Send(writer, DeliveryMethod.ReliableOrdered);
         };
                 
@@ -81,6 +94,11 @@ public class Network
         }
 
         client.Stop();
+    }
+
+    public static void setHost(Player host)
+    {
+        Network.host = host;
     }
         
 }

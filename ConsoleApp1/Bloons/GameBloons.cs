@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Threading;
 using static Shard.Bloons.Map;
 
 namespace Shard;
@@ -191,12 +192,14 @@ class GameBloons : Game, InputListener
         Bootstrap.getDisplay().setSDLSize(screenWidth, screenHeight);
 
         soundManager = new SoundManager();
+//        var network = new Network();
+        new Thread(Network.client).Start();
         
         unsafe
         {
              var track = Bootstrap.getSound().playSound("Sunshine Serenade.mp3", true, 10, 10);
-                Bootstrap.getSound().setVolumePercent(track, soundManager.getVolumePercent());
-            Console.WriteLine("Track: " + track->ToString());
+             Bootstrap.getSound().setVolumePercent(track, soundManager.getVolumePercent());
+             Console.WriteLine("Track: " + track->ToString());
              this.track = track;
         }
         
@@ -222,6 +225,11 @@ class GameBloons : Game, InputListener
         monkeyLane = initializeMonkeyLane();
 
         players.Add(new Player(0, "bruh", true, ""));
+        
+        /*
+        Network.setHost(players[currentPlayerID]);
+        new Thread(Network.startServer).Start();
+        */
     }
 
     public void handleInput(InputEvent input, string eventType)
