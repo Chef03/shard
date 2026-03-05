@@ -12,9 +12,11 @@ class GameBloons : Game, InputListener
 {
     private const int AspectRatioWidth = 16;
     private const int AspectRatioHeight = 9;
-    private const int HudSlotHeight = 92;
-    private const int HudSlotGap = 12;
-    private const int HudSlotTop = 90;
+    private const int DesignWidth = 1920;
+    private const int DesignHeight = 1080;
+    private const int HudBaseSlotHeight = 92;
+    private const int HudBaseSlotGap = 12;
+    private const int HudBaseSlotTop = 90;
     private readonly Color hudColor = Color.FromArgb(255, 110, 74, 42);
     private GameObject background;
     private int mouseX;
@@ -48,6 +50,56 @@ class GameBloons : Game, InputListener
         {
             Name = name;
             CreateTower = createTower;
+        }
+    }
+
+    private readonly struct TowerPaletteLayout
+    {
+        public int SlotX { get; }
+        public int SlotWidth { get; }
+        public int SlotHeight { get; }
+        public int SlotGap { get; }
+        public int SlotTop { get; }
+        public int TitleY { get; }
+        public int SubtitleY { get; }
+        public int TitleSize { get; }
+        public int SubtitleSize { get; }
+        public int NameTextSize { get; }
+        public int StateTextSize { get; }
+        public int NameOffsetX { get; }
+        public int NameOffsetY { get; }
+        public int StateOffsetY { get; }
+
+        public TowerPaletteLayout(
+            int slotX,
+            int slotWidth,
+            int slotHeight,
+            int slotGap,
+            int slotTop,
+            int titleY,
+            int subtitleY,
+            int titleSize,
+            int subtitleSize,
+            int nameTextSize,
+            int stateTextSize,
+            int nameOffsetX,
+            int nameOffsetY,
+            int stateOffsetY)
+        {
+            SlotX = slotX;
+            SlotWidth = slotWidth;
+            SlotHeight = slotHeight;
+            SlotGap = slotGap;
+            SlotTop = slotTop;
+            TitleY = titleY;
+            SubtitleY = subtitleY;
+            TitleSize = titleSize;
+            SubtitleSize = subtitleSize;
+            NameTextSize = nameTextSize;
+            StateTextSize = stateTextSize;
+            NameOffsetX = nameOffsetX;
+            NameOffsetY = nameOffsetY;
+            StateOffsetY = stateOffsetY;
         }
     }
 
@@ -200,6 +252,7 @@ class GameBloons : Game, InputListener
                         {
                             var worldPosition = toWorldPoint(input.X, input.Y, getWorldScale());
                             placedTowers.Add(selectedTower.CreateTower(worldPosition));
+                            selectedTowerIndex = -1;
                         }
                     }
                 }
@@ -406,26 +459,31 @@ class GameBloons : Game, InputListener
             return;
         }
 
-        var slotPadding = 14;
-        var slotX = sectionStartX + slotPadding;
-        var slotWidth = Math.Max(24, sectionWidth - (slotPadding * 2));
+        var layout = getTowerPaletteLayout(display, sectionStartX, sectionEndX);
 
-        display.showText("TOWERS", slotX, 26, 26, 245, 245, 245);
-        display.showText("Select one, then click map", slotX, 56, 12, 235, 235, 235);
+        display.showText("TOWERS", layout.SlotX, layout.TitleY, layout.TitleSize, 245, 245, 245);
+        display.showText("Select one, then click map", layout.SlotX, layout.SubtitleY, layout.SubtitleSize, 235, 235, 235);
 
         for (var i = 0; i < placeableTowers.Count; i++)
         {
-            var slotY = HudSlotTop + (i * (HudSlotHeight + HudSlotGap));
+            var slotY = layout.SlotTop + (i * (layout.SlotHeight + layout.SlotGap));
             var isSelected = i == selectedTowerIndex;
             var slotColor = isSelected
                 ? Color.FromArgb(255, 220, 176, 120)
                 : Color.FromArgb(255, 155, 103, 65);
 
-            drawFilledRect(display, slotX, slotY, slotWidth, HudSlotHeight, slotColor);
-            drawRectOutline(display, slotX, slotY, slotWidth, HudSlotHeight, Color.FromArgb(255, 245, 236, 223));
+            drawFilledRect(display, layout.SlotX, slotY, layout.SlotWidth, layout.SlotHeight, slotColor);
+            drawRectOutline(display, layout.SlotX, slotY, layout.SlotWidth, layout.SlotHeight, Color.FromArgb(255, 245, 236, 223));
 
-            display.showText(placeableTowers[i].Name, slotX + 14, slotY + 16, 17, 255, 255, 255);
-            display.showText(isSelected ? "Selected" : "Click to select", slotX + 14, slotY + 44, 12, 255, 255, 255);
+            display.showText(placeableTowers[i].Name, layout.SlotX + layout.NameOffsetX, slotY + layout.NameOffsetY, layout.NameTextSize, 255, 255, 255);
+            display.showText(
+                isSelected ? "Selected" : "Click to select",
+                layout.SlotX + layout.NameOffsetX,
+                slotY + layout.StateOffsetY,
+                layout.StateTextSize,
+                255,
+                255,
+                255);
         }
     }
 
@@ -481,20 +539,16 @@ class GameBloons : Game, InputListener
             return false;
         }
 
-        var sectionWidth = display.getWidth() - hudStartX;
-        var slotPadding = 14;
-        var slotX = hudStartX + slotPadding;
-        var slotWidth = Math.Max(24, sectionWidth - (slotPadding * 2));
-
-        if (screenX < slotX || screenX > slotX + slotWidth)
+        var layout = getTowerPaletteLayout(display, hudStartX, display.getWidth());
+        if (screenX < layout.SlotX || screenX > layout.SlotX + layout.SlotWidth)
         {
             return true;
         }
 
         for (var i = 0; i < placeableTowers.Count; i++)
         {
-            var slotY = HudSlotTop + (i * (HudSlotHeight + HudSlotGap));
-            if (screenY >= slotY && screenY <= slotY + HudSlotHeight)
+            var slotY = layout.SlotTop + (i * (layout.SlotHeight + layout.SlotGap));
+            if (screenY >= slotY && screenY <= slotY + layout.SlotHeight)
             {
                 selectedTowerIndex = i;
                 return true;
@@ -506,14 +560,9 @@ class GameBloons : Game, InputListener
 
     private TowerOption getSelectedTowerOption()
     {
-        if (placeableTowers.Count == 0)
+        if (placeableTowers.Count == 0 || selectedTowerIndex < 0 || selectedTowerIndex >= placeableTowers.Count)
         {
             return null;
-        }
-
-        if (selectedTowerIndex < 0 || selectedTowerIndex >= placeableTowers.Count)
-        {
-            selectedTowerIndex = 0;
         }
 
         return placeableTowers[selectedTowerIndex];
@@ -528,6 +577,54 @@ class GameBloons : Game, InputListener
         }
 
         return selectedTower.Name;
+    }
+
+    private TowerPaletteLayout getTowerPaletteLayout(Display display, int sectionStartX, int sectionEndX)
+    {
+        var sectionWidth = Math.Max(0, sectionEndX - sectionStartX);
+        var uiScale = getUiScale(display.getWidth(), display.getHeight());
+        var slotPadding = scaleValue(14, uiScale, minimum: 6);
+        var slotWidth = Math.Max(24, sectionWidth - (slotPadding * 2));
+        var slotHeight = scaleValue(HudBaseSlotHeight, uiScale, minimum: 48);
+        var slotGap = scaleValue(HudBaseSlotGap, uiScale, minimum: 6);
+        var slotTop = scaleValue(HudBaseSlotTop, uiScale, minimum: 56);
+        var titleSize = scaleValue(26, uiScale, minimum: 14);
+        var subtitleSize = scaleValue(12, uiScale, minimum: 10);
+        var nameTextSize = scaleValue(17, uiScale, minimum: 10);
+        var stateTextSize = scaleValue(12, uiScale, minimum: 9);
+        var nameOffsetX = scaleValue(14, uiScale, minimum: 8);
+        var nameOffsetY = Math.Max(6, slotHeight / 5);
+        var stateOffsetY = Math.Max(nameOffsetY + scaleValue(20, uiScale, minimum: 12), (slotHeight * 45) / 100);
+
+        return new TowerPaletteLayout(
+            sectionStartX + slotPadding,
+            slotWidth,
+            slotHeight,
+            slotGap,
+            slotTop,
+            scaleValue(26, uiScale, minimum: 14),
+            scaleValue(56, uiScale, minimum: 30),
+            titleSize,
+            subtitleSize,
+            nameTextSize,
+            stateTextSize,
+            nameOffsetX,
+            nameOffsetY,
+            stateOffsetY);
+    }
+
+    private static float getUiScale(int screenW, int screenH)
+    {
+        var safeWidth = Math.Max(1, screenW);
+        var safeHeight = Math.Max(1, screenH);
+        var scaleX = safeWidth / (float)DesignWidth;
+        var scaleY = safeHeight / (float)DesignHeight;
+        return Math.Max(0.45f, MathF.Min(scaleX, scaleY));
+    }
+
+    private static int scaleValue(int baseValue, float scale, int minimum)
+    {
+        return Math.Max(minimum, (int)MathF.Round(baseValue * scale));
     }
 
     // for testing

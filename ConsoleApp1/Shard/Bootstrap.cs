@@ -110,6 +110,19 @@ namespace Shard
             return runningGame;
         }
 
+        public static void setRunningGame(Game game)
+        {
+            if (game == null)
+            {
+                throw new ArgumentNullException(nameof(game));
+            }
+
+            runningGame = game;
+            targetFrameRate = Math.Max(1, runningGame.getTargetFrameRate());
+            millisPerFrame = Math.Max(1, 1000 / targetFrameRate);
+            runningGame.initialize();
+        }
+
         public static void setup(string path)
         {
             Console.WriteLine ("Path is " + path);
