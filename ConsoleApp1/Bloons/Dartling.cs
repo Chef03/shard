@@ -222,7 +222,6 @@ namespace Shard.Bloons
                 break;
             }
         }
-
         public void draw(Display display, float worldScale = 1.0f, float worldOffsetX = 0.0f, float worldOffsetY = 0.0f)
         {
             if (!active)

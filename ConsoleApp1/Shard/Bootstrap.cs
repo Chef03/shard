@@ -26,6 +26,7 @@ namespace Shard
         private static InputSystem input;
         private static PhysicsManager phys;
         private static AssetManagerBase asset;
+        private static ScoreManager scoreManager;
 
         private static int targetFrameRate;
         private static int millisPerFrame;
@@ -103,6 +104,17 @@ namespace Shard
 
         public static AssetManagerBase getAssetManager() {
             return asset;
+        }
+
+        public static ScoreManager getScoreManager()
+        {
+            if (scoreManager == null)
+            {
+                scoreManager = new ScoreManager(Path.Combine(baseDir, "score-data"));
+                scoreManager.Load();
+            }
+
+            return scoreManager;
         }
 
         public static Game getRunningGame()

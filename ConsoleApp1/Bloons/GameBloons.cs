@@ -52,6 +52,9 @@ class GameBloons : Game, InputListener
     private bool showEndScreen = false;
     private bool gameStarted = false;
     private bool startButtonHovered = false;
+    private readonly ScoreBoardKey winningTimeBoard = new("bloons", "monkey-lane");
+    private DateTimeOffset matchStartedAtUtc;
+    private bool winningTimeStored;
     
     private SoundManager soundManager;
     private unsafe MIX_Track* track;
@@ -228,10 +231,18 @@ class GameBloons : Game, InputListener
 
         if (gameWin)
         {
-            showEndScreen = true;
-            if (multiplayerSession.Role == MultiplayerRole.Host)
-                Network.sendGameOver(true);
-            Debug.Log("You survived all the waves! You win!");
+            if (!showEndScreen)
+            {
+                if (multiplayerSession.Role is MultiplayerRole.Host or MultiplayerRole.Offline)
+                {
+                    storeWinningTime();
+                }
+
+                showEndScreen = true;
+                if (multiplayerSession.Role == MultiplayerRole.Host)
+                    Network.sendGameOver(true);
+                Debug.Log("You survived all the waves! You win!");
+            }
         }
         
         if (multiplayerSession.Role == MultiplayerRole.Host)
@@ -392,6 +403,11 @@ class GameBloons : Game, InputListener
         monkeyLane = initializeMonkeyLane();
 
         players.Add(new Player(0, multiplayerSession.PlayerName, multiplayerSession.Role == MultiplayerRole.Host, multiplayerSession.ServerIp));
+
+        if (multiplayerSession.Role == MultiplayerRole.Offline)
+        {
+            startMatchTimer();
+        }
     }
 
     private void initializeMultiplayerSession()
@@ -406,7 +422,11 @@ class GameBloons : Game, InputListener
 
         if (multiplayerSession.Role == MultiplayerRole.Join)
         {
-            Network.OnGameStarted += () => gameStarted = true;
+            Network.OnGameStarted += () =>
+            {
+                gameStarted = true;
+                startMatchTimer();
+            };
             Network.OnGameOver += (isWin) =>
             {
                 gameWin = isWin;
@@ -424,6 +444,36 @@ class GameBloons : Game, InputListener
             IsBackground = true
         };
         thread.Start();
+    }
+
+    private void startMatchTimer()
+    {
+        if (matchStartedAtUtc != default)
+        {
+            return;
+        }
+
+        matchStartedAtUtc = DateTimeOffset.UtcNow;
+        winningTimeStored = false;
+    }
+
+    private void storeWinningTime()
+    {
+        if (winningTimeStored)
+        {
+            return;
+        }
+
+        if (matchStartedAtUtc == default)
+        {
+            startMatchTimer();
+        }
+
+        var elapsed = DateTimeOffset.UtcNow - matchStartedAtUtc;
+        var scoreManager = Bootstrap.getScoreManager();
+        scoreManager.RecordWinningTime(winningTimeBoard, elapsed);
+        scoreManager.Save();
+        winningTimeStored = true;
     }
 
     public void handleInput(InputEvent input, string eventType)
@@ -1265,6 +1315,7 @@ class GameBloons : Game, InputListener
                     mouseLeft = false;
                     waitingForPlayer = false;
                     gameStarted = true;
+                    startMatchTimer();
                     Network.sendGameStart();
                 }
             }
