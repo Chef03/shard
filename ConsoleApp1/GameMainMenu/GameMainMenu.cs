@@ -24,7 +24,6 @@ namespace Shard
         private string joinServerPort = DefaultServerPort.ToString();
         private MenuScreen menuScreen = MenuScreen.Main;
         private JoinField activeJoinField = JoinField.None;
-
         private enum MenuScreen
         {
             Main,

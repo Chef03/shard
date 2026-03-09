@@ -50,7 +50,7 @@ namespace Shard.Bloons
 
             for (int i = activeProjectiles.Count - 1; i >= 0; i--)
             {
-                activeProjectiles[i].update(bloons, deltaMs);
+                activeProjectiles[i].update(bloons, deltaMs, owner);
                 if (!activeProjectiles[i].getActive())
                 {
                     activeProjectiles.RemoveAt(i);
@@ -141,7 +141,7 @@ namespace Shard.Bloons
             return active;
         }
 
-        public void update(List<Bloon> bloons, double deltaMs)
+        public void update(List<Bloon> bloons, double deltaMs, Player owner)
         {
             if (!active)
             {
@@ -176,7 +176,7 @@ namespace Shard.Bloons
                     continue;
                 }
 
-                bloon.pop(damage);
+                bloon.pop(damage, owner);
                 active = false;
                 break;
             }

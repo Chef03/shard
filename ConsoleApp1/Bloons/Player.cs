@@ -50,6 +50,17 @@ namespace Shard.Bloons
             return money;
         }
 
+        public void setMoney(int money)
+        {
+            this.money = money;
+        }
+
+        public int getId()
+        {
+            return playerID;
+        }
+        
+
 
         public void addMoney(int n)
         {

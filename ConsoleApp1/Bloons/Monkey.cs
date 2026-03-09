@@ -47,7 +47,7 @@ namespace Shard.Bloons
                 return;
             }
 
-            var target = getClosestTargetInRange(position, bloons, range);
+            var target = getFurthestTargetInRange(position, bloons, range);
             if (target == null)
             {
                 return;
@@ -117,8 +117,7 @@ namespace Shard.Bloons
 
             if (distance <= hitDistance || distance <= stepDistance)
             {
-                target.pop(damage);
-                owner.addMoney(damage);
+                target.pop(damage, owner);
                 active = false;
                 return;
             }

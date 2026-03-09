@@ -10,9 +10,9 @@ namespace Shard.Bloons
         private readonly int damage;
         private readonly double attackCooldownMs;
         private double shotCooldownRemainingMs;
-        private TrackingProjectile activeProjectile;
+        private readonly List<TrackingProjectile> activeProjectiles = new List<TrackingProjectile>();
 
-        public SuperMonkey(LPoint position, double range = 400, int damage = 1, double attackSpeedPerSecond = 5, int cost = 2500)
+        public SuperMonkey(LPoint position, double range = 400, int damage = 1, double attackSpeedPerSecond = 10, int cost = 2500)
             : base(position, cost)
         {
             this.range = range;
@@ -33,27 +33,26 @@ namespace Shard.Bloons
                 shotCooldownRemainingMs -= deltaMs;
             }
 
-            if (activeProjectile != null)
+            // Update all active projectiles, remove finished ones
+            for (int i = activeProjectiles.Count - 1; i >= 0; i--)
             {
-                activeProjectile.update(deltaMs, owner);
-                if (!activeProjectile.getActive())
-                {
-                    activeProjectile = null;
-                }
+                activeProjectiles[i].update(deltaMs, owner);
+                if (!activeProjectiles[i].getActive())
+                    activeProjectiles.RemoveAt(i);
             }
 
-            if (activeProjectile != null || shotCooldownRemainingMs > 0)
+            if (shotCooldownRemainingMs > 0)
             {
                 return;
             }
 
-            var target = getClosestTargetInRange(position, bloons, range);
+            var target = getFurthestTargetInRange(position, bloons, range);
             if (target == null)
             {
                 return;
             }
 
-            activeProjectile = new TrackingProjectile(position, target, damage, speedPixelsPerSecond: 850);
+            activeProjectiles.Add(new TrackingProjectile(position, target, damage, speedPixelsPerSecond: 1000));
             shotCooldownRemainingMs = attackCooldownMs;
         }
 
@@ -64,9 +63,9 @@ namespace Shard.Bloons
             display.drawFilledCircle(screenPosition.x, screenPosition.y, toScreenSize(16, worldScale), Color.FromArgb(19, 66, 194));
             display.drawFilledCircle(screenPosition.x, screenPosition.y, toScreenSize(6, worldScale), Color.FromArgb(176, 14, 9));
 
-            if (activeProjectile != null && activeProjectile.getActive())
+            foreach (var projectile in activeProjectiles)
             {
-                activeProjectile.draw(display, worldScale, worldOffsetX, worldOffsetY);
+                projectile.draw(display, worldScale, worldOffsetX, worldOffsetY);
             }
         }
     }
