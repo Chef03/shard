@@ -26,6 +26,22 @@ namespace Shard.Bloons
             return "Dart Monkey";
         }
 
+        public override List<ProjectileSnapshot> getProjectileSnapshots()
+        {
+            var snapshots = new List<ProjectileSnapshot>(activeProjectiles.Count);
+            foreach (var projectile in activeProjectiles)
+            {
+                if (!projectile.getActive())
+                {
+                    continue;
+                }
+
+                snapshots.Add(projectile.toSnapshot());
+            }
+
+            return snapshots;
+        }
+
         public override void update(List<Bloon> bloons, double deltaMs, LPoint pointerWorldPosition, Player owner)
         {
             if (shotCooldownRemainingMs > 0)

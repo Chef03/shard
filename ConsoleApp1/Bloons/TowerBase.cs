@@ -24,6 +24,28 @@ namespace Shard.Bloons
         }
 
         public abstract string getName();
+        public virtual List<ProjectileSnapshot> getProjectileSnapshots()
+        {
+            return new List<ProjectileSnapshot>();
+        }
+
+        public virtual TowerSnapshot createSnapshot(int ownerId)
+        {
+            return new TowerSnapshot
+            {
+                TowerType = GetType().Name,
+                X = position.x,
+                Y = position.y,
+                OwnerId = ownerId,
+                AimDirectionX = 0,
+                AimDirectionY = 0,
+            };
+        }
+
+        public virtual void applySnapshot(TowerSnapshot snapshot)
+        {
+        }
+
         public abstract void update(List<Bloon> bloons, double deltaMs, LPoint pointerWorldPosition, Player owner);
         public abstract void draw(Display display, float worldScale = 1.0f, float worldOffsetX = 0.0f, float worldOffsetY = 0.0f);
 

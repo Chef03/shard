@@ -37,6 +37,17 @@ namespace Shard.Bloons
             return "Bomb Shooter";
         }
 
+        public override List<ProjectileSnapshot> getProjectileSnapshots()
+        {
+            var snapshots = new List<ProjectileSnapshot>();
+            if (activeProjectile != null && activeProjectile.getActive())
+            {
+                snapshots.Add(activeProjectile.toSnapshot());
+            }
+
+            return snapshots;
+        }
+
         public override void update(List<Bloon> bloons, double deltaMs, LPoint pointerWorldPosition, Player owner)
         {
             if (shotCooldownRemainingMs > 0)
@@ -166,6 +177,21 @@ namespace Shard.Bloons
             display.drawLine(screenX, screenY - bodyRadius, screenX, screenY - bodyRadius - leafLength, 70, 180, 70, 255);
             display.drawLine(screenX - 2, screenY - bodyRadius + 1, screenX - 4, screenY - bodyRadius - leafLength + 2, 70, 180, 70, 255);
             display.drawLine(screenX + 2, screenY - bodyRadius + 1, screenX + 4, screenY - bodyRadius - leafLength + 2, 70, 180, 70, 255);
+        }
+
+        public ProjectileSnapshot toSnapshot()
+        {
+            return new ProjectileSnapshot
+            {
+                X = (float)xPos,
+                Y = (float)yPos,
+                RenderType = ProjectileRenderType.FilledCircle,
+                Size = 5,
+                R = 245,
+                G = 210,
+                B = 70,
+                A = 255,
+            };
         }
 
         private void explode(List<Bloon> bloons, Player owner)

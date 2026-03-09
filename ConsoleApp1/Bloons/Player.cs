@@ -27,7 +27,7 @@ namespace Shard.Bloons
             this.isHost = isHost;
             this.IPAddress = IPAddress;
             //this.lives = 100; // default starting lives
-            this.money = 3000; // default starting money
+            this.money = 100000; // default starting money
             this.monkeys = new List<Monkey>();
             this.isConnected = false; // assume player is connected when created
         }

@@ -39,6 +39,47 @@ namespace Shard.Bloons
             return "Dartling";
         }
 
+        public override List<ProjectileSnapshot> getProjectileSnapshots()
+        {
+            var snapshots = new List<ProjectileSnapshot>(activeProjectiles.Count);
+            foreach (var projectile in activeProjectiles)
+            {
+                if (!projectile.getActive())
+                {
+                    continue;
+                }
+
+                snapshots.Add(projectile.toSnapshot());
+            }
+
+            return snapshots;
+        }
+
+        public override TowerSnapshot createSnapshot(int ownerId)
+        {
+            return new TowerSnapshot
+            {
+                TowerType = GetType().Name,
+                X = position.x,
+                Y = position.y,
+                OwnerId = ownerId,
+                AimDirectionX = (float)aimDirectionX,
+                AimDirectionY = (float)aimDirectionY,
+            };
+        }
+
+        public override void applySnapshot(TowerSnapshot snapshot)
+        {
+            var aimLengthSq = (snapshot.AimDirectionX * snapshot.AimDirectionX) + (snapshot.AimDirectionY * snapshot.AimDirectionY);
+            if (aimLengthSq <= 0.0001f)
+            {
+                return;
+            }
+
+            aimDirectionX = snapshot.AimDirectionX;
+            aimDirectionY = snapshot.AimDirectionY;
+        }
+
         public override void update(List<Bloon> bloons, double deltaMs, LPoint pointerWorldPosition, Player owner)
         {
             updateAim(pointerWorldPosition);
@@ -194,6 +235,21 @@ namespace Shard.Bloons
                 (int)MathF.Round(worldOffsetY + ((float)yPos * worldScale)),
                 Math.Max(5, (int)MathF.Round(3 * worldScale)),
                 Color.FromArgb(255, 215, 75));
+        }
+
+        public ProjectileSnapshot toSnapshot()
+        {
+            return new ProjectileSnapshot
+            {
+                X = (float)xPos,
+                Y = (float)yPos,
+                RenderType = ProjectileRenderType.FilledCircle,
+                Size = 5,
+                R = 255,
+                G = 215,
+                B = 75,
+                A = 255,
+            };
         }
     }
 }

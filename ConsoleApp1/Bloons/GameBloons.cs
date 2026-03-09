@@ -47,6 +47,7 @@ class GameBloons : Game, InputListener
     private int lives = 100;
     private Dictionary<string, TowerOption> towerOptionByTypeName;
     private List<BloonSnapshot> receivedBloonSnapshots = new();
+    private List<ProjectileSnapshot> receivedProjectileSnapshots = new();
     private bool waitingForPlayer = false;
     private bool showEndScreen = false;
     private bool gameStarted = false;
@@ -189,9 +190,12 @@ class GameBloons : Game, InputListener
 
         var pointerWorldPosition = toWorldPoint(mouseX, mouseY, worldScale);
 
-        foreach (var tower in placedTowers)
+        if (multiplayerSession.Role is MultiplayerRole.Host or MultiplayerRole.Offline)
         {
-            tower.update(cachedBloons, deltaTimeMs, pointerWorldPosition, players[currentPlayerID]);
+            foreach (var tower in placedTowers)
+            {
+                tower.update(cachedBloons, deltaTimeMs, pointerWorldPosition, players[currentPlayerID]);
+            }
         }
 
         if (multiplayerSession.Role is MultiplayerRole.Host or MultiplayerRole.Offline)
@@ -203,6 +207,11 @@ class GameBloons : Game, InputListener
         foreach (var tower in placedTowers)
         {
             tower.draw(display, worldScale, background.Transform.X, background.Transform.Y);
+        }
+
+        if (multiplayerSession.Role == MultiplayerRole.Join)
+        {
+            renderProjectileSnapshots(worldScale);
         }
 
         foreach (Player player in players)
@@ -241,13 +250,12 @@ class GameBloons : Game, InputListener
                 isTargetable = b.getIsTargetable(),
             });
 
-            var towerSnaps = placedTowers.ConvertAll(t => new TowerSnapshot
+            var towerSnaps = placedTowers.ConvertAll(t => t.createSnapshot(0));
+            var projectileSnaps = new List<ProjectileSnapshot>();
+            foreach (var tower in placedTowers)
             {
-                TowerType = t.GetType().Name,
-                X         = t.getPosition().x,
-                Y         = t.getPosition().y,
-                OwnerId   = 0,
-            });
+                projectileSnaps.AddRange(tower.getProjectileSnapshots());
+            }
 
             var moneySnaps = players.ConvertAll(p => (p.getId(), p.getMoney()));
 
@@ -258,6 +266,7 @@ class GameBloons : Game, InputListener
                 WaveElapsedTimeMs = waveElapsedTimeMs,
                 Bloons            = bloonSnaps,
                 Towers            = towerSnaps,
+                Projectiles       = projectileSnaps,
                 PlayerMoney       = moneySnaps,
             }, Bootstrap.getDeltaTime() * 1000);
         }
@@ -293,6 +302,41 @@ class GameBloons : Game, InputListener
                 _ => Color.FromArgb(100,100,100)
             };
             if(snap.Layer > 0) display.drawFilledCircle(screenPoint.x, screenPoint.y, radius, color);
+        }
+    }
+
+    private void renderProjectileSnapshots(float worldScale)
+    {
+        var display = Bootstrap.getDisplay();
+        foreach (var snapshot in receivedProjectileSnapshots)
+        {
+            var screenPoint = toScreenPoint(new LPoint { x = (int)snapshot.X, y = (int)snapshot.Y }, worldScale);
+            if (snapshot.RenderType == ProjectileRenderType.FilledCircle)
+            {
+                var radius = Math.Max(1, (int)MathF.Round(snapshot.Size * worldScale));
+                display.drawFilledCircle(screenPoint.x, screenPoint.y, radius, Color.FromArgb(snapshot.A, snapshot.R, snapshot.G, snapshot.B));
+                continue;
+            }
+
+            var halfLength = Math.Max(1, (int)MathF.Round(snapshot.Size * worldScale));
+            display.drawLine(
+                screenPoint.x - halfLength,
+                screenPoint.y,
+                screenPoint.x + halfLength,
+                screenPoint.y,
+                snapshot.R,
+                snapshot.G,
+                snapshot.B,
+                snapshot.A);
+            display.drawLine(
+                screenPoint.x,
+                screenPoint.y - halfLength,
+                screenPoint.x,
+                screenPoint.y + halfLength,
+                snapshot.R,
+                snapshot.G,
+                snapshot.B,
+                snapshot.A);
         }
     }
 
@@ -1093,10 +1137,15 @@ class GameBloons : Game, InputListener
         foreach (var snap in state.Towers)
         {
             if (towerOptionByTypeName.TryGetValue(snap.TowerType, out var option))
-                placedTowers.Add(option.CreateTower(new LPoint { x = snap.X, y = snap.Y }));
+            {
+                var tower = option.CreateTower(new LPoint { x = snap.X, y = snap.Y });
+                tower.applySnapshot(snap);
+                placedTowers.Add(tower);
+            }
         }
 
         receivedBloonSnapshots = state.Bloons ?? new();
+        receivedProjectileSnapshots = state.Projectiles ?? new();
     }
     private void drawEndScreen()
     {

@@ -64,6 +64,8 @@ internal struct TowerSnapshot : INetSerializable
     public int    X;
     public int    Y;
     public int    OwnerId;
+    public float  AimDirectionX;
+    public float  AimDirectionY;
 
     public void Serialize(NetDataWriter writer)
     {
@@ -71,6 +73,8 @@ internal struct TowerSnapshot : INetSerializable
         writer.Put(X);
         writer.Put(Y);
         writer.Put(OwnerId);
+        writer.Put(AimDirectionX);
+        writer.Put(AimDirectionY);
     }
 
     public void Deserialize(NetDataReader reader)
@@ -79,8 +83,53 @@ internal struct TowerSnapshot : INetSerializable
         X         = reader.GetInt();
         Y         = reader.GetInt();
         OwnerId   = reader.GetInt();
+        AimDirectionX = reader.GetFloat();
+        AimDirectionY = reader.GetFloat();
     }
 }
+
+internal enum ProjectileRenderType : byte
+{
+    FilledCircle = 1,
+    Cross = 2
+}
+
+internal struct ProjectileSnapshot : INetSerializable
+{
+    public float X;
+    public float Y;
+    public ProjectileRenderType RenderType;
+    public int Size;
+    public byte R;
+    public byte G;
+    public byte B;
+    public byte A;
+
+    public void Serialize(NetDataWriter writer)
+    {
+        writer.Put(X);
+        writer.Put(Y);
+        writer.Put((byte)RenderType);
+        writer.Put(Size);
+        writer.Put(R);
+        writer.Put(G);
+        writer.Put(B);
+        writer.Put(A);
+    }
+
+    public void Deserialize(NetDataReader reader)
+    {
+        X = reader.GetFloat();
+        Y = reader.GetFloat();
+        RenderType = (ProjectileRenderType)reader.GetByte();
+        Size = reader.GetInt();
+        R = reader.GetByte();
+        G = reader.GetByte();
+        B = reader.GetByte();
+        A = reader.GetByte();
+    }
+}
+
 internal struct GameStateMessage : INetSerializable
 {
     public int                    Lives;
@@ -88,6 +137,7 @@ internal struct GameStateMessage : INetSerializable
     public double                 WaveElapsedTimeMs;
     public List<BloonSnapshot>    Bloons;
     public List<TowerSnapshot>    Towers;
+    public List<ProjectileSnapshot> Projectiles;
     public List<(int id, int money)> PlayerMoney;
 
     public void Serialize(NetDataWriter writer)
@@ -103,6 +153,10 @@ internal struct GameStateMessage : INetSerializable
         writer.Put(Towers?.Count ?? 0);
         foreach (var t in Towers ?? new())
             writer.Put(t);
+
+        writer.Put(Projectiles?.Count ?? 0);
+        foreach (var projectile in Projectiles ?? new())
+            writer.Put(projectile);
 
         writer.Put(PlayerMoney?.Count ?? 0);
         foreach (var (id, money) in PlayerMoney ?? new())
@@ -134,6 +188,15 @@ internal struct GameStateMessage : INetSerializable
             var t = new TowerSnapshot();
             t.Deserialize(reader);
             Towers.Add(t);
+        }
+
+        int projectileCount = reader.GetInt();
+        Projectiles = new(projectileCount);
+        for (int i = 0; i < projectileCount; i++)
+        {
+            var projectile = new ProjectileSnapshot();
+            projectile.Deserialize(reader);
+            Projectiles.Add(projectile);
         }
 
         int moneyCount = reader.GetInt();
@@ -170,7 +233,7 @@ internal struct TowerPlaceMessage : INetSerializable
 
 internal static class Network
 {
-    private const int StateBroadcastIntervalMs = 100; //tick rate
+    private const int StateBroadcastIntervalMs = 16; //tick rate
     private static Player host;
     private static NetManager         serverManager;
     private static NetManager         clientManager;

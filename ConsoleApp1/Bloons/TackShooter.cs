@@ -38,6 +38,22 @@ namespace Shard.Bloons
             return "Tack Shooter";
         }
 
+        public override List<ProjectileSnapshot> getProjectileSnapshots()
+        {
+            var snapshots = new List<ProjectileSnapshot>(activeProjectiles.Count);
+            foreach (var projectile in activeProjectiles)
+            {
+                if (!projectile.getActive())
+                {
+                    continue;
+                }
+
+                snapshots.Add(projectile.toSnapshot());
+            }
+
+            return snapshots;
+        }
+
         public override void update(List<Bloon> bloons, double deltaMs, LPoint pointerWorldPosition, Player owner)
         {
             if (shotCooldownRemainingMs > 0)
@@ -228,6 +244,21 @@ namespace Shard.Bloons
 
             display.drawLine(screenX - tipLength, screenY, screenX + tipLength, screenY, 25, 25, 25, 255);
             display.drawLine(screenX, screenY - tipLength, screenX, screenY + tipLength, 25, 25, 25, 255);
+        }
+
+        public ProjectileSnapshot toSnapshot()
+        {
+            return new ProjectileSnapshot
+            {
+                X = (float)xPos,
+                Y = (float)yPos,
+                RenderType = ProjectileRenderType.Cross,
+                Size = 5,
+                R = 25,
+                G = 25,
+                B = 25,
+                A = 255,
+            };
         }
     }
 }
