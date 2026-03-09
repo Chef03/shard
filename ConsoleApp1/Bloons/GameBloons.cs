@@ -12,6 +12,8 @@ namespace Shard;
 
 class GameBloons : Game, InputListener
 {
+    private const int HostControllerId = 0;
+    private const int ClientControllerId = 1;
     private const int AspectRatioWidth = 16;
     private const int AspectRatioHeight = 9;
     private const int DesignWidth = 1920;
@@ -34,7 +36,7 @@ class GameBloons : Game, InputListener
     private SixLabors.ImageSharp.Image image;
     private Map monkeyLane;
     private readonly List<Bloon> cachedBloons = new List<Bloon>();
-    private readonly List<Tower> placedTowers = new List<Tower>();
+    private readonly List<PlacedTower> placedTowers = new List<PlacedTower>();
     private readonly List<TowerOption> placeableTowers = new List<TowerOption>();
     private int selectedTowerIndex;
     private List<Player> players = new List<Player>();
@@ -55,6 +57,7 @@ class GameBloons : Game, InputListener
     private readonly ScoreBoardKey winningTimeBoard = new("bloons", "monkey-lane");
     private DateTimeOffset matchStartedAtUtc;
     private bool winningTimeStored;
+    private readonly Dictionary<int, LPoint> latestPointerByControllerId = new Dictionary<int, LPoint>();
     
     private SoundManager soundManager;
     private unsafe MIX_Track* track;
@@ -84,6 +87,18 @@ class GameBloons : Game, InputListener
         {
             Name = name;
             CreateTower = createTower;
+        }
+    }
+
+    private sealed class PlacedTower
+    {
+        public Tower Tower { get; }
+        public int ControllerId { get; }
+
+        public PlacedTower(Tower tower, int controllerId)
+        {
+            Tower = tower;
+            ControllerId = controllerId;
         }
     }
 
@@ -192,12 +207,25 @@ class GameBloons : Game, InputListener
         }
 
         var pointerWorldPosition = toWorldPoint(mouseX, mouseY, worldScale);
+        latestPointerByControllerId[getLocalControllerId()] = pointerWorldPosition;
+
+        if (multiplayerSession.Role == MultiplayerRole.Join)
+        {
+            Network.sendPlayerAim(new PlayerAimMessage
+            {
+                ControllerId = getLocalControllerId(),
+                X = pointerWorldPosition.x,
+                Y = pointerWorldPosition.y,
+            });
+        }
 
         if (multiplayerSession.Role is MultiplayerRole.Host or MultiplayerRole.Offline)
         {
-            foreach (var tower in placedTowers)
+            var localPlayer = players[currentPlayerID];
+            foreach (var placedTower in placedTowers)
             {
-                tower.update(cachedBloons, deltaTimeMs, pointerWorldPosition, players[currentPlayerID]);
+                var towerPointer = getPointerForController(placedTower.ControllerId, pointerWorldPosition);
+                placedTower.Tower.update(cachedBloons, deltaTimeMs, towerPointer, localPlayer);
             }
         }
 
@@ -207,9 +235,9 @@ class GameBloons : Game, InputListener
         }
         renderPathPoints(monkeyLane, worldScale);
 
-        foreach (var tower in placedTowers)
+        foreach (var placedTower in placedTowers)
         {
-            tower.draw(display, worldScale, background.Transform.X, background.Transform.Y);
+            placedTower.Tower.draw(display, worldScale, background.Transform.X, background.Transform.Y);
         }
 
         if (multiplayerSession.Role == MultiplayerRole.Join)
@@ -261,11 +289,11 @@ class GameBloons : Game, InputListener
                 isTargetable = b.getIsTargetable(),
             });
 
-            var towerSnaps = placedTowers.ConvertAll(t => t.createSnapshot(0));
+            var towerSnaps = placedTowers.ConvertAll(t => t.Tower.createSnapshot(t.ControllerId));
             var projectileSnaps = new List<ProjectileSnapshot>();
-            foreach (var tower in placedTowers)
+            foreach (var placedTower in placedTowers)
             {
-                projectileSnaps.AddRange(tower.getProjectileSnapshots());
+                projectileSnaps.AddRange(placedTower.Tower.getProjectileSnapshots());
             }
 
             var moneySnaps = players.ConvertAll(p => (p.getId(), p.getMoney()));
@@ -360,6 +388,7 @@ class GameBloons : Game, InputListener
         initializeMultiplayerSession();
         // HOST: when a client requests a tower, validate and place it server-side.
         Network.OnTowerPlaceRequested += OnClientTowerPlaceRequested;
+        Network.OnPlayerAimUpdated += OnClientAimUpdated;
 
         // CLIENT: when the host sends a state update, apply it locally.
         Network.OnStateReceived += ApplyStateFromHost;
@@ -531,7 +560,7 @@ class GameBloons : Game, InputListener
                                 {
                                     // Host places locally; it will broadcast to clients on next state tick.
                                     players[currentPlayerID].removeMoney(cost);
-                                    placedTowers.Add(selectedTower.CreateTower(worldPosition));
+                                    placedTowers.Add(new PlacedTower(selectedTower.CreateTower(worldPosition), getLocalControllerId()));
                                     selectedTowerIndex = -1;
                                 }
                                 else
@@ -543,6 +572,7 @@ class GameBloons : Game, InputListener
                                         X         = worldPosition.x,
                                         Y         = worldPosition.y,
                                         PlayerId  = players[currentPlayerID].getId(),
+                                        ControllerId = getLocalControllerId(),
                                     });
                                     selectedTowerIndex = -1;
                                 }
@@ -1150,6 +1180,32 @@ class GameBloons : Game, InputListener
     {
         return 120; // cap at 120 fps
     }
+
+    private int getLocalControllerId()
+    {
+        return multiplayerSession.Role == MultiplayerRole.Join
+            ? ClientControllerId
+            : HostControllerId;
+    }
+
+    private LPoint getPointerForController(int controllerId, LPoint fallbackPointer)
+    {
+        if (latestPointerByControllerId.TryGetValue(controllerId, out var pointer))
+        {
+            return pointer;
+        }
+
+        return fallbackPointer;
+    }
+
+    private void OnClientAimUpdated(PlayerAimMessage msg)
+    {
+        latestPointerByControllerId[msg.ControllerId] = new LPoint
+        {
+            x = msg.X,
+            y = msg.Y,
+        };
+    }
     
     // ── New method: HOST validates and places a tower for a client ────────────────
     private void OnClientTowerPlaceRequested(TowerPlaceMessage msg)
@@ -1162,7 +1218,7 @@ class GameBloons : Game, InputListener
         if (player == null || player.getMoney() < option.getCost()) return;
 
         player.removeMoney(option.getCost());
-        placedTowers.Add(option.CreateTower(new LPoint { x = msg.X, y = msg.Y }));
+        placedTowers.Add(new PlacedTower(option.CreateTower(new LPoint { x = msg.X, y = msg.Y }), msg.ControllerId));
     }
 
 // ── New method: CLIENT applies authoritative state from host ──────────────────
@@ -1190,7 +1246,7 @@ class GameBloons : Game, InputListener
             {
                 var tower = option.CreateTower(new LPoint { x = snap.X, y = snap.Y });
                 tower.applySnapshot(snap);
-                placedTowers.Add(tower);
+                placedTowers.Add(new PlacedTower(tower, snap.OwnerId));
             }
         }
 
@@ -1253,6 +1309,7 @@ class GameBloons : Game, InputListener
     {
         Network.reset();
         Network.OnTowerPlaceRequested -= OnClientTowerPlaceRequested;
+        Network.OnPlayerAimUpdated -= OnClientAimUpdated;
         Network.OnStateReceived -= ApplyStateFromHost;
         Bootstrap.getInput().removeListener(this);
         Bootstrap.setRunningGame(new GameMainMenu());

@@ -16,6 +16,7 @@ internal enum MessageType : byte
     GameStart = 4,
     PlayerJoin = 5,
     GameOver = 6,
+    PlayerAim = 7,
 }
 
 
@@ -212,6 +213,7 @@ internal struct TowerPlaceMessage : INetSerializable
     public int    X;
     public int    Y;
     public int    PlayerId;
+    public int    ControllerId;
 
     public void Serialize(NetDataWriter writer)
     {
@@ -219,6 +221,7 @@ internal struct TowerPlaceMessage : INetSerializable
         writer.Put(X);
         writer.Put(Y);
         writer.Put(PlayerId);
+        writer.Put(ControllerId);
     }
 
     public void Deserialize(NetDataReader reader)
@@ -227,6 +230,28 @@ internal struct TowerPlaceMessage : INetSerializable
         X         = reader.GetInt();
         Y         = reader.GetInt();
         PlayerId  = reader.GetInt();
+        ControllerId = reader.GetInt();
+    }
+}
+
+internal struct PlayerAimMessage : INetSerializable
+{
+    public int ControllerId;
+    public int X;
+    public int Y;
+
+    public void Serialize(NetDataWriter writer)
+    {
+        writer.Put(ControllerId);
+        writer.Put(X);
+        writer.Put(Y);
+    }
+
+    public void Deserialize(NetDataReader reader)
+    {
+        ControllerId = reader.GetInt();
+        X = reader.GetInt();
+        Y = reader.GetInt();
     }
 }
 
@@ -253,6 +278,7 @@ internal static class Network
 
     /// <summary>Raised on the HOST when a client requests a tower placement.</summary>
     public static event Action<TowerPlaceMessage> OnTowerPlaceRequested;
+    public static event Action<PlayerAimMessage> OnPlayerAimUpdated;
     
     public static void sendGameStart()
     {
@@ -320,6 +346,16 @@ internal static class Network
         serverPeer.Send(writer, DeliveryMethod.ReliableOrdered);
     }
 
+    public static void sendPlayerAim(PlayerAimMessage msg)
+    {
+        if (serverPeer == null) return;
+
+        var writer = new NetDataWriter();
+        writer.Put((byte)MessageType.PlayerAim);
+        writer.Put(msg);
+        serverPeer.Send(writer, DeliveryMethod.Unreliable);
+    }
+
     /// <summary>Polls client events; call once per game frame on the CLIENT.</summary>
     public static void pollClient()
     {
@@ -373,6 +409,11 @@ internal static class Network
                 // is already synchronised with the game loop.
                 //OnTowerPlaceRequested?.Invoke(msg);
                 mainThreadActions.Enqueue(() => OnTowerPlaceRequested?.Invoke(msg));
+            }else if (msgType == MessageType.PlayerAim)
+            {
+                var msg = new PlayerAimMessage();
+                msg.Deserialize(dataReader);
+                mainThreadActions.Enqueue(() => OnPlayerAimUpdated?.Invoke(msg));
             }else if (msgType == MessageType.PlayerJoin)
             {
                 ConnectedClientName = dataReader.GetString();
@@ -474,6 +515,7 @@ internal static class Network
         // Clear all event subscribers so old GameBloons instances don't linger
         OnStateReceived = null;
         OnTowerPlaceRequested = null;
+        OnPlayerAimUpdated = null;
         OnGameStarted = null;
     }
     
