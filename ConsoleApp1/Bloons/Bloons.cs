@@ -27,7 +27,7 @@ namespace Shard.Bloons
     }
     internal class Bloon
     {
-        private const double baseSpeed = 1.0; // base speed for a red bloon, other bloons will be faster based on their layer
+        private const double baseSpeed = 1.5; // base speed for a red bloon, other bloons will be faster based on their layer
         private BloonColor color;
         private int layer;
         private double speed;
@@ -44,11 +44,13 @@ namespace Shard.Bloons
         private LPoint position => new LPoint() { x = (int)xPos, y = (int)yPos };
         private int nextPointIndex; // index of the next point in the lane path that the bloon is moving towards
         private bool isTargetable = true;// can be targeted by towers, becomes false when in tunnels
-
+        private double distanceTravelled = 0;
+        private double totalPathLength = 0;
+        
         public Bloon(int layer, bool camo, bool regrow, double xStartPos, double YstartPos, double spawnDelayMs)
         {
             this.layer = layer;
-            this.speed = baseSpeed + layer * 0.3;
+            this.speed = baseSpeed + layer * 0.4;
             this.camo = camo;
             this.regrow = regrow;
             this.nextPointIndex = 1;
@@ -57,8 +59,21 @@ namespace Shard.Bloons
             this.spawnDelayMs = spawnDelayMs;
         }
 
+        public void updateSpeed(int layer)
+        {
+            if (layer == 6)
+            {
+                speed = baseSpeed + layer; //white fast
+            }
+            else
+            {
+                speed = baseSpeed + layer * 0.4;
+            }
 
-        public void pop(int damage)
+        }
+
+
+        public void pop(int damage, Player owner)
         {
             
             
@@ -69,17 +84,18 @@ namespace Shard.Bloons
             
             this.popSound();
             layer -= damage;
+            owner.addMoney(damage);
             if (layer <= 0)
             {
                 active = false;
                 popped = true;
             }
-            speed = baseSpeed * layer;
+            updateSpeed(layer);
         }
 
         private unsafe void popSound()
         {
-            var track = Bootstrap.getSound().playSound ("pop.mp3", false, 10, 10, 50);
+            var track = Bootstrap.getSound().playSound ("pop.mp3", false, 10, 10, 30);
         }
 
         //public bool isTargetable()
@@ -91,6 +107,11 @@ namespace Shard.Bloons
         {
             return position;
         }
+        public bool getIsCamo()    => camo;
+        public bool getIsRegrow()  => regrow;
+        public float getProgress() => totalPathLength > 0
+            ? (float)Math.Clamp(distanceTravelled / totalPathLength, 0.0, 1.0)
+            : 0f;
 
         public bool getIsTargetable() { return isTargetable; }
 
@@ -130,19 +151,23 @@ namespace Shard.Bloons
 
         public int getRenderRadius()
         {
-            return color == BloonColor.Red ? 30 : 10;
+            return 30 + layer * 1;
         }
 
         public Color getRenderColor()
         {
-            BloonColor[] colors = [BloonColor.Red, BloonColor.Blue, BloonColor.Green, BloonColor.Yellow, BloonColor.Pink];
+            BloonColor[] colors = [BloonColor.Red, BloonColor.Blue, BloonColor.Green, BloonColor.Yellow, BloonColor.Pink, BloonColor.White, BloonColor.Black];
             BloonColor color = colors[this.layer - 1];
             return color switch
             {
-                BloonColor.Red => Color.FromArgb(255, 0, 0),
-                BloonColor.Blue => Color.FromArgb(0, 0, 255),
-                BloonColor.Green => Color.FromArgb(0, 255, 0),
-                _ => Color.FromArgb(255, 255, 255)
+                BloonColor.Red    => Color.FromArgb(255, 0,   0),
+                BloonColor.Blue   => Color.FromArgb(0,   0,   255),
+                BloonColor.Green  => Color.FromArgb(0,   200, 0),
+                BloonColor.Yellow => Color.FromArgb(255, 220, 0),
+                BloonColor.Pink   => Color.FromArgb(255, 105, 180),
+                BloonColor.White  => Color.FromArgb(255, 255, 255),
+                BloonColor.Black  => Color.FromArgb(0,   0,   0),
+                _ => Color.FromArgb(100,100,100),
             };
         }
 
@@ -154,9 +179,10 @@ namespace Shard.Bloons
 
             double distance = Math.Sqrt(dx * dx + dy * dy);
             if (distance == 0) return;
-
-            xPos += (dx / distance) * speed;
-            yPos += (dy / distance) * speed;
+            double step = Math.Min(speed, distance);
+            xPos += (dx / distance) * step;
+            yPos += (dy / distance) * step;
+            distanceTravelled += step;
         }
         public void updateBloon(List<LPoint> path, double deltaMs, double waveElapsedTime)
         {
@@ -168,6 +194,15 @@ namespace Shard.Bloons
 
             if (waveElapsedTime >= spawnDelayMs)
             {
+                if (!active && totalPathLength == 0) // first activation
+                {
+                    for (int i = 1; i < path.Count; i++)
+                    {
+                        double dx = path[i].x - path[i - 1].x;
+                        double dy = path[i].y - path[i - 1].y;
+                        totalPathLength += Math.Sqrt(dx * dx + dy * dy);
+                    }
+                }
                 active = true;
             }
             else
@@ -212,6 +247,5 @@ namespace Shard.Bloons
             }
         }
 
-        //TODO: hitting bloons, reaching end, regrowing
     }
 }

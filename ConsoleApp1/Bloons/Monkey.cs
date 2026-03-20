@@ -26,6 +26,17 @@ namespace Shard.Bloons
             return "Dart Monkey";
         }
 
+        public override List<ProjectileSnapshot> getProjectileSnapshots()
+        {
+            var snapshots = new List<ProjectileSnapshot>();
+            if (activeProjectile != null && activeProjectile.getActive())
+            {
+                snapshots.Add(activeProjectile.toSnapshot());
+            }
+
+            return snapshots;
+        }
+
         public override void update(List<Bloon> bloons, double deltaMs, LPoint pointerWorldPosition, Player owner)
         {
             if (shotCooldownRemainingMs > 0)
@@ -47,7 +58,7 @@ namespace Shard.Bloons
                 return;
             }
 
-            var target = getClosestTargetInRange(position, bloons, range);
+            var target = getFurthestTargetInRange(position, bloons, range);
             if (target == null)
             {
                 return;
@@ -117,8 +128,7 @@ namespace Shard.Bloons
 
             if (distance <= hitDistance || distance <= stepDistance)
             {
-                target.pop(damage);
-                owner.addMoney(damage);
+                target.pop(damage, owner);
                 active = false;
                 return;
             }
@@ -144,6 +154,21 @@ namespace Shard.Bloons
                 (int)MathF.Round(worldOffsetY + ((float)yPos * worldScale)),
                 Math.Max(1, (int)MathF.Round(4 * worldScale)),
                 Color.FromArgb(255, 40, 40));
+        }
+
+        public ProjectileSnapshot toSnapshot()
+        {
+            return new ProjectileSnapshot
+            {
+                X = (float)xPos,
+                Y = (float)yPos,
+                RenderType = ProjectileRenderType.FilledCircle,
+                Size = 4,
+                R = 255,
+                G = 40,
+                B = 40,
+                A = 255,
+            };
         }
     }
 }

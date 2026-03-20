@@ -12,6 +12,8 @@ namespace Shard;
 
 class GameBloons : Game, InputListener
 {
+    private const int HostControllerId = 0;
+    private const int ClientControllerId = 1;
     private const int AspectRatioWidth = 16;
     private const int AspectRatioHeight = 9;
     private const int DesignWidth = 1920;
@@ -34,7 +36,7 @@ class GameBloons : Game, InputListener
     private SixLabors.ImageSharp.Image image;
     private Map monkeyLane;
     private readonly List<Bloon> cachedBloons = new List<Bloon>();
-    private readonly List<Tower> placedTowers = new List<Tower>();
+    private readonly List<PlacedTower> placedTowers = new List<PlacedTower>();
     private readonly List<TowerOption> placeableTowers = new List<TowerOption>();
     private int selectedTowerIndex;
     private List<Player> players = new List<Player>();
@@ -45,7 +47,18 @@ class GameBloons : Game, InputListener
     private bool gameWin = false;
     private double waveElapsedTimeMs = 0;
     private int lives = 100;
-
+    private Dictionary<string, TowerOption> towerOptionByTypeName;
+    private List<BloonSnapshot> receivedBloonSnapshots = new();
+    private List<ProjectileSnapshot> receivedProjectileSnapshots = new();
+    private bool waitingForPlayer = false;
+    private bool showEndScreen = false;
+    private bool gameStarted = false;
+    private bool startButtonHovered = false;
+    private readonly ScoreBoardKey winningTimeBoard = new("bloons", "monkey-lane");
+    private DateTimeOffset matchStartedAtUtc;
+    private bool winningTimeStored;
+    private readonly Dictionary<int, LPoint> latestPointerByControllerId = new Dictionary<int, LPoint>();
+    
     private SoundManager soundManager;
     private unsafe MIX_Track* track;
 
@@ -74,6 +87,18 @@ class GameBloons : Game, InputListener
         {
             Name = name;
             CreateTower = createTower;
+        }
+    }
+
+    private sealed class PlacedTower
+    {
+        public Tower Tower { get; }
+        public int ControllerId { get; }
+
+        public PlacedTower(Tower tower, int controllerId)
+        {
+            Tower = tower;
+            ControllerId = controllerId;
         }
     }
 
@@ -134,7 +159,20 @@ class GameBloons : Game, InputListener
 
     public override void update()
     {
+        if (showEndScreen)
+        {
+            stopBackgroundMusic();
+            Network.pollClient();
+            drawEndScreen();
+            return;
+        }
         var display = Bootstrap.getDisplay();
+        // Show waiting screen until a client connects
+        if (waitingForPlayer || (multiplayerSession.Role == MultiplayerRole.Join && !gameStarted))
+        {
+            drawWaitingScreen();
+            return;
+        }
         var worldScale = getWorldScale();
         var selectedTowerName = getSelectedTowerName();
         display.showText("FPS: " + Bootstrap.getFPS(), 10, 10, 12, 255, 255, 255);
@@ -163,22 +201,49 @@ class GameBloons : Game, InputListener
         soundManager.drawVolumeSlider();
 
         double deltaTimeMs = Bootstrap.getDeltaTime() * 1000;
-        spawnBloons(monkeyLane, deltaTimeMs, currentWaveNumber);
-        //updateBloons(monkeyLane, deltaTimeMs);
-
-        var pointerWorldPosition = toWorldPoint(mouseX, mouseY, worldScale);
-
-        foreach (var tower in placedTowers)
+        if (multiplayerSession.Role is MultiplayerRole.Host or MultiplayerRole.Offline)
         {
-            tower.update(cachedBloons, deltaTimeMs, pointerWorldPosition, players[currentPlayerID]);
+            
+            spawnBloons(monkeyLane, deltaTimeMs, currentWaveNumber);
         }
 
-        renderBloons(worldScale);
+        var pointerWorldPosition = toWorldPoint(mouseX, mouseY, worldScale);
+        latestPointerByControllerId[getLocalControllerId()] = pointerWorldPosition;
+
+        if (multiplayerSession.Role == MultiplayerRole.Join)
+        {
+            Network.sendPlayerAim(new PlayerAimMessage
+            {
+                ControllerId = getLocalControllerId(),
+                X = pointerWorldPosition.x,
+                Y = pointerWorldPosition.y,
+            });
+        }
+
+        if (multiplayerSession.Role is MultiplayerRole.Host or MultiplayerRole.Offline)
+        {
+            var localPlayer = players[currentPlayerID];
+            foreach (var placedTower in placedTowers)
+            {
+                var towerPointer = getPointerForController(placedTower.ControllerId, pointerWorldPosition);
+                placedTower.Tower.update(cachedBloons, deltaTimeMs, towerPointer, localPlayer);
+            }
+        }
+
+        if (multiplayerSession.Role is MultiplayerRole.Host or MultiplayerRole.Offline)
+        {
+            renderBloons(worldScale);
+        }
         renderPathPoints(monkeyLane, worldScale);
 
-        foreach (var tower in placedTowers)
+        foreach (var placedTower in placedTowers)
         {
-            tower.draw(display, worldScale, background.Transform.X, background.Transform.Y);
+            placedTower.Tower.draw(display, worldScale, background.Transform.X, background.Transform.Y);
+        }
+
+        if (multiplayerSession.Role == MultiplayerRole.Join)
+        {
+            renderProjectileSnapshots(worldScale);
         }
 
         foreach (Player player in players)
@@ -186,13 +251,132 @@ class GameBloons : Game, InputListener
             if(lives <= 0)
             {
                 gameover = true;
-                Debug.Log("You lost all your lives! Game over!");
+                showEndScreen = true;
+                //Debug.Log("You lost all your lives! Game over!");
+                if (multiplayerSession.Role == MultiplayerRole.Host)
+                    Network.sendGameOver(false);
             }
         }
 
         if (gameWin)
         {
-            Debug.Log("You survived all the waves! You win!");
+            if (!showEndScreen)
+            {
+                if (multiplayerSession.Role is MultiplayerRole.Host or MultiplayerRole.Offline)
+                {
+                    storeWinningTime();
+                }
+
+                showEndScreen = true;
+                if (multiplayerSession.Role == MultiplayerRole.Host)
+                    Network.sendGameOver(true);
+                Debug.Log("You survived all the waves! You win!");
+            }
+        }
+        
+        if (multiplayerSession.Role == MultiplayerRole.Host)
+        {
+            Network.pollServer();
+
+            var bloonSnaps = cachedBloons.ConvertAll(b => new BloonSnapshot
+            {
+                X        = b.getPosition().x,
+                Y        = b.getPosition().y,
+                Layer    = b.getLayer(),
+                Progress = b.getProgress(),
+                IsCamo   = b.getIsCamo(),
+                IsRegrow = b.getIsRegrow(),
+                isActive = b.getActive(),
+                isTargetable = b.getIsTargetable(),
+            });
+
+            var towerSnaps = placedTowers.ConvertAll(t => t.Tower.createSnapshot(t.ControllerId));
+            var projectileSnaps = new List<ProjectileSnapshot>();
+            foreach (var placedTower in placedTowers)
+            {
+                projectileSnaps.AddRange(placedTower.Tower.getProjectileSnapshots());
+            }
+
+            var moneySnaps = players.ConvertAll(p => (p.getId(), p.getMoney()));
+
+            Network.broadcastState(new GameStateMessage
+            {
+                Lives             = lives,
+                WaveNumber        = currentWaveNumber,
+                WaveElapsedTimeMs = waveElapsedTimeMs,
+                Bloons            = bloonSnaps,
+                Towers            = towerSnaps,
+                Projectiles       = projectileSnaps,
+                PlayerMoney       = moneySnaps,
+            }, Bootstrap.getDeltaTime() * 1000);
+        }
+        else if (multiplayerSession.Role == MultiplayerRole.Join)
+        {
+            Network.pollClient();   // fires OnStateReceived callbacks
+            renderBloonSnapshots(worldScale);
+        }
+    }
+    private void renderBloonSnapshots(float worldScale)
+    {
+        
+        var display = Bootstrap.getDisplay();
+        foreach (var snap in receivedBloonSnapshots)
+        {
+            if (!snap.isActive || !snap.isTargetable)
+            {
+                continue;
+            }
+            var screenPoint = toScreenPoint(new LPoint { x = (int)snap.X, y = (int)snap.Y }, worldScale);
+            // Reuse the same radius/color logic as Bloon, keyed on layer
+            var radius = Math.Max(1, (int)MathF.Round((30 + snap.Layer * 1) * worldScale));
+            var color = snap.Layer switch
+            {
+                
+                1 => Color.FromArgb(255, 0,   0),
+                2 => Color.FromArgb(0,   0,   255),
+                3 => Color.FromArgb(0,   200, 0),
+                4 => Color.FromArgb(255, 220, 0),
+                5 => Color.FromArgb(255, 105, 180),
+                6 => Color.FromArgb(255, 255, 255),
+                7 => Color.FromArgb(0,0,0),
+                _ => Color.FromArgb(100,100,100)
+            };
+            if(snap.Layer > 0) display.drawFilledCircle(screenPoint.x, screenPoint.y, radius, color);
+        }
+    }
+
+    private void renderProjectileSnapshots(float worldScale)
+    {
+        var display = Bootstrap.getDisplay();
+        foreach (var snapshot in receivedProjectileSnapshots)
+        {
+            var screenPoint = toScreenPoint(new LPoint { x = (int)snapshot.X, y = (int)snapshot.Y }, worldScale);
+            if (snapshot.RenderType == ProjectileRenderType.FilledCircle)
+            {
+                var radius = Math.Max(1, (int)MathF.Round(snapshot.Size * worldScale));
+                display.drawFilledCircle(screenPoint.x, screenPoint.y, radius, Color.FromArgb(snapshot.A, snapshot.R, snapshot.G, snapshot.B));
+                continue;
+            }
+
+            var halfLength = Math.Max(1, (int)MathF.Round(snapshot.Size * worldScale));
+            display.drawLine(
+                screenPoint.x - halfLength,
+                screenPoint.y,
+                screenPoint.x + halfLength,
+                screenPoint.y,
+                snapshot.R,
+                snapshot.G,
+                snapshot.B,
+                snapshot.A);
+            display.drawLine(
+                screenPoint.x,
+                screenPoint.y - halfLength,
+                screenPoint.x,
+                screenPoint.y + halfLength,
+                snapshot.R,
+                snapshot.G,
+                snapshot.B,
+                snapshot.A);
         }
     }
 
@@ -203,13 +387,17 @@ class GameBloons : Game, InputListener
 
         soundManager = new SoundManager();
         initializeMultiplayerSession();
+        // HOST: when a client requests a tower, validate and place it server-side.
+        Network.OnTowerPlaceRequested += OnClientTowerPlaceRequested;
+        Network.OnPlayerAimUpdated += OnClientAimUpdated;
+
+        // CLIENT: when the host sends a state update, apply it locally.
+        Network.OnStateReceived += ApplyStateFromHost;
         
         unsafe
         {
-             var track = Bootstrap.getSound().playSound("Sunshine Serenade.mp3", true, 10, 10);
+             track = Bootstrap.getSound().playSound("Sunshine Serenade.mp3", true, 10, 10);
              Bootstrap.getSound().setVolumePercent(track, soundManager.getVolumePercent());
-             Console.WriteLine("Track: " + track->ToString());
-             this.track = track;
         }
         
         background = new GameObject();
@@ -228,12 +416,26 @@ class GameBloons : Game, InputListener
         placeableTowers.Add(new TowerOption("Bomb Shooter", position => new BombShooter(position)));
         placeableTowers.Add(new TowerOption("Tack Shooter", position => new TackShooter(position)));
         placeableTowers.Add(new TowerOption("Super Monkey", position => new SuperMonkey(position)));
-        selectedTowerIndex = 0;
+        selectedTowerIndex = -1;
+        
+        towerOptionByTypeName = new Dictionary<string, TowerOption>
+        {
+            { "Monkey",       placeableTowers[0] },
+            { "Dartling",     placeableTowers[1] },
+            { "BombShooter",  placeableTowers[2] },
+            { "TackShooter",  placeableTowers[3] },
+            { "SuperMonkey",  placeableTowers[4] },
+        };
 
         // Initialize map 1: Monkey lane
         monkeyLane = initializeMonkeyLane();
 
         players.Add(new Player(0, multiplayerSession.PlayerName, multiplayerSession.Role == MultiplayerRole.Host, multiplayerSession.ServerIp));
+
+        if (multiplayerSession.Role == MultiplayerRole.Offline)
+        {
+            startMatchTimer();
+        }
     }
 
     private void initializeMultiplayerSession()
@@ -242,11 +444,23 @@ class GameBloons : Game, InputListener
         {
             Network.setHost(new Player(0, multiplayerSession.PlayerName, true, multiplayerSession.ServerIp));
             startBackgroundThread(() => Network.startServer(multiplayerSession.ServerPort));
+            waitingForPlayer = true;
             return;
         }
 
         if (multiplayerSession.Role == MultiplayerRole.Join)
         {
+            Network.OnGameStarted += () =>
+            {
+                gameStarted = true;
+                startMatchTimer();
+            };
+            Network.OnGameOver += (isWin) =>
+            {
+                gameWin = isWin;
+                gameover = !isWin;
+                showEndScreen = true;
+            };
             startBackgroundThread(() => Network.connectToServer(multiplayerSession.ServerIp, multiplayerSession.ServerPort, multiplayerSession.PlayerName));
         }
     }
@@ -258,6 +472,36 @@ class GameBloons : Game, InputListener
             IsBackground = true
         };
         thread.Start();
+    }
+
+    private void startMatchTimer()
+    {
+        if (matchStartedAtUtc != default)
+        {
+            return;
+        }
+
+        matchStartedAtUtc = DateTimeOffset.UtcNow;
+        winningTimeStored = false;
+    }
+
+    private void storeWinningTime()
+    {
+        if (winningTimeStored)
+        {
+            return;
+        }
+
+        if (matchStartedAtUtc == default)
+        {
+            startMatchTimer();
+        }
+
+        var elapsed = DateTimeOffset.UtcNow - matchStartedAtUtc;
+        var scoreManager = Bootstrap.getScoreManager();
+        scoreManager.RecordWinningTime(winningTimeBoard, elapsed);
+        scoreManager.Save();
+        winningTimeStored = true;
     }
 
     public void handleInput(InputEvent input, string eventType)
@@ -281,10 +525,7 @@ class GameBloons : Game, InputListener
             Bootstrap.getSound().pan(this.track ,100 - (val * 100),  val * 100);
             this.soundManager.handleVolumeInput(this.track, input, eventType);
         }
-
-        //Debug.Log("eventType = " + eventType);
-
-
+        
         // left click = 1
         // right click = 3
         // middle click = 2
@@ -311,13 +552,29 @@ class GameBloons : Game, InputListener
                         if (selectedTower != null)
                         {
                             var worldPosition = toWorldPoint(input.X, input.Y, getWorldScale());
-                            if (players[currentPlayerID].getMoney() >= selectedTower.getCost())
+                            var cost = selectedTower.getCost();
+                            if (players[currentPlayerID].getMoney() >= cost)
                             {
-                                players[currentPlayerID].removeMoney(selectedTower.getCost());
-                                placedTowers.Add(selectedTower.CreateTower(worldPosition));
-                            }
-                            else
-                            {
+                                if (multiplayerSession.Role is MultiplayerRole.Host or MultiplayerRole.Offline)
+                                {
+                                    // Host places locally; it will broadcast to clients on next state tick.
+                                    players[currentPlayerID].removeMoney(cost);
+                                    placedTowers.Add(new PlacedTower(selectedTower.CreateTower(worldPosition), getLocalControllerId()));
+                                    selectedTowerIndex = -1;
+                                }
+                                else
+                                {
+                                    // Client asks the host to validate and place.
+                                    Network.requestTowerPlace(new TowerPlaceMessage
+                                    {
+                                        TowerType = selectedTower.Name,
+                                        X         = worldPosition.x,
+                                        Y         = worldPosition.y,
+                                        PlayerId  = players[currentPlayerID].getId(),
+                                        ControllerId = getLocalControllerId(),
+                                    });
+                                    selectedTowerIndex = -1;
+                                }
                             }
                         }
                     }
@@ -349,6 +606,31 @@ class GameBloons : Game, InputListener
                 break;
             case "WindowResize":
                 break;
+            case "KeyDown":
+                if (input.Key == (int)SDL_Scancode.SDL_SCANCODE_1)
+                {
+                    selectedTowerIndex = (selectedTowerIndex == 0 ? -1 : 0);
+                }
+                if (input.Key == (int)SDL_Scancode.SDL_SCANCODE_2)
+                {
+                    selectedTowerIndex = (selectedTowerIndex == 1 ? -1 : 1);
+                }
+                if (input.Key == (int)SDL_Scancode.SDL_SCANCODE_3)
+                {
+                    selectedTowerIndex = (selectedTowerIndex == 2 ? -1 : 2);
+                }
+                if (input.Key == (int)SDL_Scancode.SDL_SCANCODE_4)
+                {
+                    selectedTowerIndex = (selectedTowerIndex == 3 ? -1 : 3);
+                }
+
+                if (input.Key == (int)SDL_Scancode.SDL_SCANCODE_5)
+                {
+                    selectedTowerIndex = (selectedTowerIndex == 4 ? -1 : 4);
+                }
+
+                break;
+   
         }
     }
 
@@ -548,14 +830,15 @@ class GameBloons : Game, InputListener
             drawRectOutline(display, layout.SlotX, slotY, layout.SlotWidth, layout.SlotHeight, Color.FromArgb(255, 245, 236, 223));
 
             Tower temp = placeableTowers[i].CreateTower(new LPoint() { x = 0, y = 0 });
+            var cost = placeableTowers[i].getCost();
             display.showText(placeableTowers[i].Name, slotX + 14, slotY + 16, 17, 255, 255, 255);
-            if(temp.getCost() > players[currentPlayerID].getMoney())
+            if(cost > players[currentPlayerID].getMoney())
             {
-                display.showText(temp.getCost().ToString(), slotX + 200, slotY + 16, 17, 255, 0, 0);
+                display.showText(cost.ToString(), slotX + 150, slotY + 16, 17, 255, 0, 0);
             }
             else
             {
-                display.showText(temp.getCost().ToString(), slotX + 200, slotY + 16, 17, 255, 255, 255);
+                display.showText(cost.ToString(), slotX + 150, slotY + 16, 17, 255, 255, 255);
             }
 
             display.showText(isSelected ? "Selected" : "Click to select", slotX + 14, slotY + 44, 12, 255, 255, 255);
@@ -805,41 +1088,338 @@ class GameBloons : Game, InputListener
         int startX = lane.getPath()[0].x;
         int startY = lane.getPath()[0].y;
 
-        // Wave 1 - red bloons (layer 1, base speed, no camo, no regrow)
-        Map.Wave wave1 = new Map.Wave()
-        {
-            spawnIntervalMs = 1000,
-            Bloons = new List<Bloon>()
-        };
-
-        for (int i = 1; i <= 5; i++)
-        {
-            wave1.Bloons.Add(new Bloon( 3, false, false, startX, startY, spawnDelayMs: i * wave1.spawnIntervalMs));
-        }
-
-        // Wave 2 - yellow bloons (layer 4)
-        Map.Wave wave2 = new Map.Wave()
-        {
-            spawnIntervalMs = 500,
-            Bloons = new List<Bloon>()
-        };
-
-        //var wave1DurationMs = 5 * wave1.spawnIntervalMs;
-        //var wave2StartDelayMs = wave1DurationMs + 1000;
+        // Wave 1 - 20 Reds
+        var wave1 = new Map.Wave { spawnIntervalMs = 400, Bloons = new List<Bloon>() };
         for (int i = 1; i <= 20; i++)
-        {
-            wave2.Bloons.Add(new Bloon(4, false, false, startX, startY, spawnDelayMs: i * wave2.spawnIntervalMs));
-        }
+            wave1.Bloons.Add(new Bloon(1, false, false, startX, startY, i * wave1.spawnIntervalMs));
+        for (int i = 1; i <= 20; i++)
+            wave1.Bloons.Add(new Bloon(7, false, false, startX, startY, i * wave1.spawnIntervalMs));
 
-        List<Map.Wave> waves = new List<Map.Wave>();
-        waves.Add(wave1);
-        waves.Add(wave2);
+        // Wave 2 - 30 Reds, 10 Blues
+        var wave2 = new Map.Wave { spawnIntervalMs = 350, Bloons = new List<Bloon>() };
+        for (int i = 1; i <= 30; i++)
+            wave2.Bloons.Add(new Bloon(1, false, false, startX, startY, i * wave2.spawnIntervalMs));
+        for (int i = 1; i <= 10; i++)
+            wave2.Bloons.Add(new Bloon(2, false, false, startX, startY, (30 + i) * wave2.spawnIntervalMs));
 
+        // Wave 3 - 20 Blues, 10 Greens
+        var wave3 = new Map.Wave { spawnIntervalMs = 300, Bloons = new List<Bloon>() };
+        for (int i = 1; i <= 20; i++)
+            wave3.Bloons.Add(new Bloon(2, false, false, startX, startY, i * wave3.spawnIntervalMs));
+        for (int i = 1; i <= 10; i++)
+            wave3.Bloons.Add(new Bloon(3, false, false, startX, startY, (20 + i) * wave3.spawnIntervalMs));
+
+        // Wave 4 - 30 Blues, 20 Greens, 5 Yellows
+        var wave4 = new Map.Wave { spawnIntervalMs = 280, Bloons = new List<Bloon>() };
+        for (int i = 1; i <= 30; i++)
+            wave4.Bloons.Add(new Bloon(2, false, false, startX, startY, i * wave4.spawnIntervalMs));
+        for (int i = 1; i <= 20; i++)
+            wave4.Bloons.Add(new Bloon(3, false, false, startX, startY, (30 + i) * wave4.spawnIntervalMs));
+        for (int i = 1; i <= 5; i++)
+            wave4.Bloons.Add(new Bloon(4, false, false, startX, startY, (50 + i) * wave4.spawnIntervalMs));
+
+        // Wave 5 - 40 Greens, 15 Yellows
+        var wave5 = new Map.Wave { spawnIntervalMs = 250, Bloons = new List<Bloon>() };
+        for (int i = 1; i <= 40; i++)
+            wave5.Bloons.Add(new Bloon(3, false, false, startX, startY, i * wave5.spawnIntervalMs));
+        for (int i = 1; i <= 15; i++)
+            wave5.Bloons.Add(new Bloon(4, false, false, startX, startY, (40 + i) * wave5.spawnIntervalMs));
+
+        // Wave 6 - 25 Greens, 20 Yellows, 5 Pinks
+        var wave6 = new Map.Wave { spawnIntervalMs = 220, Bloons = new List<Bloon>() };
+        for (int i = 1; i <= 25; i++)
+            wave6.Bloons.Add(new Bloon(3, false, false, startX, startY, i * wave6.spawnIntervalMs));
+        for (int i = 1; i <= 20; i++)
+            wave6.Bloons.Add(new Bloon(4, false, false, startX, startY, (25 + i) * wave6.spawnIntervalMs));
+        for (int i = 1; i <= 5; i++)
+            wave6.Bloons.Add(new Bloon(5, false, false, startX, startY, (45 + i) * wave6.spawnIntervalMs));
+
+        // Wave 7 - 30 Yellows, 20 Pinks interleaved
+        var wave7 = new Map.Wave { spawnIntervalMs = 180, Bloons = new List<Bloon>() };
+        for (int i = 1; i <= 30; i++)
+            wave7.Bloons.Add(new Bloon(4, false, false, startX, startY, i * 2 * wave7.spawnIntervalMs));
+        for (int i = 1; i <= 20; i++)
+            wave7.Bloons.Add(new Bloon(5, false, false, startX, startY, ((i * 2) - 1) * wave7.spawnIntervalMs));
+
+        // Wave 8 - 50 Pinks, 10 Yellows mixed in front
+        var wave8 = new Map.Wave { spawnIntervalMs = 160, Bloons = new List<Bloon>() };
+        for (int i = 1; i <= 10; i++)
+            wave8.Bloons.Add(new Bloon(4, false, false, startX, startY, i * wave8.spawnIntervalMs));
+        for (int i = 1; i <= 50; i++)
+            wave8.Bloons.Add(new Bloon(5, false, false, startX, startY, (10 + i) * wave8.spawnIntervalMs));
+
+        // Wave 9 - 40 Pinks, 20 Yellows, 10 Greens all at once rapid-fire
+        var wave9 = new Map.Wave { spawnIntervalMs = 120, Bloons = new List<Bloon>() };
+        for (int i = 1; i <= 20; i++)
+            wave9.Bloons.Add(new Bloon(3, false, false, startX, startY, i * wave9.spawnIntervalMs));
+        for (int i = 1; i <= 20; i++)
+            wave9.Bloons.Add(new Bloon(4, false, false, startX, startY, (20 + i) * wave9.spawnIntervalMs));
+        for (int i = 1; i <= 40; i++)
+            wave9.Bloons.Add(new Bloon(5, false, false, startX, startY, (40 + i) * wave9.spawnIntervalMs));
+
+        // Wave 10 - All Pinks, massive swarm
+        var wave10 = new Map.Wave { spawnIntervalMs = 80, Bloons = new List<Bloon>() };
+        for (int i = 1; i <= 80; i++)
+            wave10.Bloons.Add(new Bloon(5, false, false, startX, startY, i * wave10.spawnIntervalMs));
+
+        // Wave 11 - white + pink
+        var wave11 = new Map.Wave { spawnIntervalMs = 100, Bloons = new List<Bloon>() };
+        for (int i = 1; i <= 40; i++)
+            wave10.Bloons.Add(new Bloon(5, false, false, startX, startY, i * wave11.spawnIntervalMs));
+        for (int i = 1; i <= 40; i++)
+            wave11.Bloons.Add(new Bloon(6, false, false, startX, startY, i * wave11.spawnIntervalMs));
+        for (int i = 1; i <= 40; i++)
+            wave11.Bloons.Add(new Bloon(7, false, false, startX, startY, i * wave11.spawnIntervalMs));
+        
+        List<Map.Wave> waves = new List<Map.Wave> { wave1, wave2, wave3, wave4, wave5, wave6, wave7, wave8, wave9, wave10, wave11 };
         return new Map(lane, waves);
     }
 
     public override int getTargetFrameRate()
     {
         return 120; // cap at 120 fps
+    }
+
+    private int getLocalControllerId()
+    {
+        return multiplayerSession.Role == MultiplayerRole.Join
+            ? ClientControllerId
+            : HostControllerId;
+    }
+
+    private LPoint getPointerForController(int controllerId, LPoint fallbackPointer)
+    {
+        if (latestPointerByControllerId.TryGetValue(controllerId, out var pointer))
+        {
+            return pointer;
+        }
+
+        return fallbackPointer;
+    }
+
+    private void OnClientAimUpdated(PlayerAimMessage msg)
+    {
+        latestPointerByControllerId[msg.ControllerId] = new LPoint
+        {
+            x = msg.X,
+            y = msg.Y,
+        };
+    }
+    
+    // ── New method: HOST validates and places a tower for a client ────────────────
+    private void OnClientTowerPlaceRequested(TowerPlaceMessage msg)
+    {
+        // Only the host runs this.
+        var option = placeableTowers.Find(t => t.Name == msg.TowerType);
+        if (option == null) return;
+
+        var player = players.Find(p => p.getId() == msg.PlayerId);
+        if (player == null || player.getMoney() < option.getCost()) return;
+
+        player.removeMoney(option.getCost());
+        placedTowers.Add(new PlacedTower(option.CreateTower(new LPoint { x = msg.X, y = msg.Y }), msg.ControllerId));
+    }
+
+// ── New method: CLIENT applies authoritative state from host ──────────────────
+    private void ApplyStateFromHost(GameStateMessage state)
+    {
+        // Authoritative values come from the host.
+        lives             = state.Lives;
+        currentWaveNumber = state.WaveNumber;
+        waveElapsedTimeMs = state.WaveElapsedTimeMs;
+
+        // Sync player money.
+        foreach (var (id, money) in state.PlayerMoney)
+        {
+            var player = players.Find(p => p.getId() == id);
+            if (player != null)
+                player.setMoney(money);   // add setMoney() to Player if not present
+        }
+
+        // Rebuild tower list from host snapshot (simple replace strategy).
+        // A production implementation would diff to avoid re-creating unchanged towers.
+        placedTowers.Clear();
+        foreach (var snap in state.Towers)
+        {
+            if (towerOptionByTypeName.TryGetValue(snap.TowerType, out var option))
+            {
+                var tower = option.CreateTower(new LPoint { x = snap.X, y = snap.Y });
+                tower.applySnapshot(snap);
+                placedTowers.Add(new PlacedTower(tower, snap.OwnerId));
+            }
+        }
+
+        receivedBloonSnapshots = state.Bloons ?? new();
+        receivedProjectileSnapshots = state.Projectiles ?? new();
+    }
+    private void drawEndScreen()
+    {
+        var display = Bootstrap.getDisplay();
+        var screenW = display.getWidth();
+        var screenH = display.getHeight();
+        var centerX = screenW / 2;
+        var centerY = screenH / 2;
+
+        // Dim overlay
+        for (var y = 0; y < screenH; y++)
+            display.drawLine(0, y, screenW, y, 0, 0, 0, 180);
+
+        // Title
+        var titleText = gameWin ? "YOU WIN!" : "GAME OVER";
+        var titleColor = gameWin
+            ? (r: 255, g: 230, b: 100)
+            : (r: 255, g: 60,  b: 60);
+
+        display.showText(titleText, centerX - 120, centerY - 100, 52, titleColor.r, titleColor.g, titleColor.b);
+
+        var statsText = gameWin
+            ? $"You survived all {monkeyLane.Waves.Count} waves!"
+            : $"You ran out of lives on wave {currentWaveNumber + 1}.";
+        display.showText(statsText, centerX - 200, centerY - 20, 22, 255, 255, 255);
+
+        // Back to menu button
+        var btnW = 320;
+        var btnH = 72;
+        var btnX = centerX - btnW / 2;
+        var btnY = centerY + 60;
+
+        var isHovered = mouseX >= btnX && mouseX <= btnX + btnW && mouseY >= btnY && mouseY <= btnY + btnH;
+        var btnColor = isHovered ? Color.FromArgb(255, 190, 126, 75) : Color.FromArgb(255, 110, 74, 42);
+
+        for (var row = 0; row < btnH; row++)
+            display.drawLine(btnX, btnY + row, btnX + btnW, btnY + row, btnColor.R, btnColor.G, btnColor.B, btnColor.A);
+        display.drawLine(btnX, btnY, btnX + btnW, btnY, 246, 225, 180, 255);
+        display.drawLine(btnX, btnY + btnH, btnX + btnW, btnY + btnH, 246, 225, 180, 255);
+        display.drawLine(btnX, btnY, btnX, btnY + btnH, 246, 225, 180, 255);
+        display.drawLine(btnX + btnW, btnY, btnX + btnW, btnY + btnH, 246, 225, 180, 255);
+
+        display.showText("Back to Main Menu", btnX + 34, btnY + 20, 24, 255, 255, 255);
+        display.drawFilledCircle(mouseX, mouseY, 4, Color.FromArgb(255, 255, 245, 120));
+
+        // Click handling
+        if (mouseLeft && isHovered)
+        {
+            mouseLeft = false;
+            returnToMainMenu();
+        }
+    }
+
+    private void returnToMainMenu()
+    {
+        stopBackgroundMusic();
+        Network.reset();
+        Network.OnTowerPlaceRequested -= OnClientTowerPlaceRequested;
+        Network.OnPlayerAimUpdated -= OnClientAimUpdated;
+        Network.OnStateReceived -= ApplyStateFromHost;
+        Bootstrap.getInput().removeListener(this);
+        Bootstrap.setRunningGame(new GameMainMenu());
+    }
+
+    private unsafe void stopBackgroundMusic()
+    {
+        if (track == null)
+        {
+            return;
+        }
+
+        Bootstrap.getSound().stopSound(track);
+        track = null;
+    }
+
+    private void drawWaitingScreen()
+    {
+        
+        // Poll network events even while waiting so OnGameStarted can fire
+        if (multiplayerSession.Role == MultiplayerRole.Join)
+            Network.pollClient();
+        else if (multiplayerSession.Role == MultiplayerRole.Host)
+            Network.pollServer();
+        
+        var display = Bootstrap.getDisplay();
+        var screenW = display.getWidth();
+        var screenH = display.getHeight();
+        var centerX = screenW / 2;
+        var centerY = screenH / 2;
+
+        // Dim background
+        for (var y = 0; y < screenH; y++)
+            display.drawLine(0, y, screenW, y, 20, 15, 10, 255);
+
+        if (multiplayerSession.Role == MultiplayerRole.Host)
+        {
+            if (!Network.ClientConnected)
+            {
+                display.showText("Waiting for player to join...", centerX - 200, centerY - 20, 28, 255, 255, 255);
+            }
+            else
+            {
+                // Client has connected — show their name and a Start button
+                display.showText($"{Network.ConnectedClientName} has joined!", centerX - 180, centerY - 60, 26, 180, 255, 150);
+
+                var btnW = 280;
+                var btnH = 72;
+                var btnX = centerX - btnW / 2;
+                var btnY = centerY + 10;
+
+                startButtonHovered = mouseX >= btnX && mouseX <= btnX + btnW
+                                   && mouseY >= btnY && mouseY <= btnY + btnH;
+
+                var btnColor = startButtonHovered
+                    ? Color.FromArgb(255, 100, 180, 80)
+                    : Color.FromArgb(255, 60, 130, 50);
+
+                for (var row = 0; row < btnH; row++)
+                    display.drawLine(btnX, btnY + row, btnX + btnW, btnY + row, btnColor.R, btnColor.G, btnColor.B, btnColor.A);
+                display.drawLine(btnX,        btnY,        btnX + btnW, btnY,        200, 255, 180, 255);
+                display.drawLine(btnX,        btnY + btnH, btnX + btnW, btnY + btnH, 200, 255, 180, 255);
+                display.drawLine(btnX,        btnY,        btnX,        btnY + btnH, 200, 255, 180, 255);
+                display.drawLine(btnX + btnW, btnY,        btnX + btnW, btnY + btnH, 200, 255, 180, 255);
+
+                display.showText("Start Game", btnX + 54, btnY + 20, 26, 255, 255, 255);
+                display.drawFilledCircle(mouseX, mouseY, 4, Color.FromArgb(255, 255, 245, 120));
+
+                if (mouseLeft && startButtonHovered)
+                {
+                    mouseLeft = false;
+                    waitingForPlayer = false;
+                    gameStarted = true;
+                    startMatchTimer();
+                    Network.sendGameStart();
+                }
+            }
+        }
+        else
+        {
+            // Client waiting for host to press Start
+            display.showText("Waiting for host to start the game...", centerX - 240, centerY - 20, 26, 255, 255, 255);
+            display.showText($"Connected as: {multiplayerSession.PlayerName}", centerX - 130, centerY + 30, 18, 180, 220, 255);
+        }
+        //cancel button
+        var cancelW = 200;
+        var cancelH = 58;
+        var cancelX = centerX - cancelW / 2;
+        var cancelY = centerY + 100;
+
+        var cancelHovered = mouseX >= cancelX && mouseX <= cancelX + cancelW
+                                              && mouseY >= cancelY && mouseY <= cancelY + cancelH;
+        var cancelColor = cancelHovered
+            ? Color.FromArgb(255, 180, 60, 50)
+            : Color.FromArgb(255, 120, 40, 35);
+
+        for (var row = 0; row < cancelH; row++)
+            display.drawLine(cancelX, cancelY + row, cancelX + cancelW, cancelY + row, cancelColor.R, cancelColor.G, cancelColor.B, cancelColor.A);
+        display.drawLine(cancelX,          cancelY,          cancelX + cancelW, cancelY,          255, 180, 170, 255);
+        display.drawLine(cancelX,          cancelY + cancelH, cancelX + cancelW, cancelY + cancelH, 255, 180, 170, 255);
+        display.drawLine(cancelX,          cancelY,          cancelX,           cancelY + cancelH, 255, 180, 170, 255);
+        display.drawLine(cancelX + cancelW, cancelY,         cancelX + cancelW, cancelY + cancelH, 255, 180, 170, 255);
+        display.showText("Cancel", cancelX + 54, cancelY + 14, 22, 255, 255, 255);
+
+        display.drawFilledCircle(mouseX, mouseY, 4, Color.FromArgb(255, 255, 245, 120));
+
+        if (mouseLeft && cancelHovered)
+        {
+            mouseLeft = false;
+            returnToMainMenu();
+        }
     }
 }

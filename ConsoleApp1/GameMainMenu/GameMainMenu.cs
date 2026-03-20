@@ -12,6 +12,7 @@ namespace Shard
         private const int DesignWidth = 1920;
         private const int DesignHeight = 1080;
         private const int DefaultServerPort = 9050;
+        private static readonly ScoreBoardKey ScoreboardKey = new ScoreBoardKey("bloons", "monkey-lane");
 
         private readonly List<MenuButton> menuButtons = new List<MenuButton>();
         private int mouseX;
@@ -24,12 +25,12 @@ namespace Shard
         private string joinServerPort = DefaultServerPort.ToString();
         private MenuScreen menuScreen = MenuScreen.Main;
         private JoinField activeJoinField = JoinField.None;
-
         private enum MenuScreen
         {
             Main,
             Multiplayer,
-            Join
+            Join,
+            Scoreboard
         }
 
         private enum JoinField
@@ -116,6 +117,10 @@ namespace Shard
             if (menuScreen == MenuScreen.Join)
             {
                 drawJoinInputs(display, screenW, screenH, uiScale, statusY);
+            }
+            else if (menuScreen == MenuScreen.Scoreboard)
+            {
+                drawScoreboard(display, screenW, screenH, uiScale, statusY);
             }
 
             foreach (var button in menuButtons)
@@ -213,6 +218,12 @@ namespace Shard
             setMenuScreen(MenuScreen.Multiplayer);
         }
 
+        private void openScoreboard()
+        {
+            multiplayerStatus = string.Empty;
+            setMenuScreen(MenuScreen.Scoreboard);
+        }
+
         private void openJoinMenu()
         {
             activeJoinField = JoinField.PlayerName;
@@ -285,6 +296,7 @@ namespace Shard
             {
                 menuButtons.Add(new MenuButton("Single player", startSinglePlayer));
                 menuButtons.Add(new MenuButton("Multiplayer", openMultiplayer));
+                menuButtons.Add(new MenuButton("Scoreboard", openScoreboard));
                 menuButtons.Add(new MenuButton("Exit", exitGame));
                 return;
             }
@@ -293,6 +305,12 @@ namespace Shard
             {
                 menuButtons.Add(new MenuButton("Host game", hostMultiplayer));
                 menuButtons.Add(new MenuButton("Join game", openJoinMenu));
+                menuButtons.Add(new MenuButton("Back", backToMainMenu));
+                return;
+            }
+
+            if (menuScreen == MenuScreen.Scoreboard)
+            {
                 menuButtons.Add(new MenuButton("Back", backToMainMenu));
                 return;
             }
@@ -313,6 +331,11 @@ namespace Shard
                 return "JOIN SERVER";
             }
 
+            if (menuScreen == MenuScreen.Scoreboard)
+            {
+                return "WIN HISTORY";
+            }
+
             return "MAIN MENU";
         }
 
@@ -326,6 +349,35 @@ namespace Shard
             drawInputField(display, layout.FieldX, layout.PlayerFieldY, layout.FieldWidth, layout.FieldHeight, "Player name", joinPlayerName, JoinField.PlayerName, uiScale);
             drawInputField(display, layout.FieldX, layout.ServerFieldY, layout.FieldWidth, layout.FieldHeight, "Server IP or host", joinServerIp, JoinField.ServerIp, uiScale);
             drawInputField(display, layout.FieldX, layout.PortFieldY, layout.FieldWidth, layout.FieldHeight, "Port", joinServerPort, JoinField.ServerPort, uiScale);
+        }
+
+        private void drawScoreboard(Display display, int screenW, int screenH, float uiScale, int statusY)
+        {
+            var safeWidth = Math.Max(1, screenW);
+            var fieldWidth = Math.Min((int)MathF.Round(safeWidth * 0.8f), scaledValue(820, uiScale, minimum: 280));
+            var fieldX = (safeWidth - fieldWidth) / 2;
+            var top = statusY + scaledValue(48, uiScale, minimum: 24);
+            var titleSize = scaledValue(18, uiScale, minimum: 10);
+            var lineSize = scaledValue(22, uiScale, minimum: 12);
+            var lineHeight = scaledValue(34, uiScale, minimum: 18);
+            var winningTimes = Bootstrap.getScoreManager().GetWinningTimes(
+                ScoreboardKey,
+                static entry => entry.DurationMs,
+                12);
+
+            display.showText("Fastest Bloons wins", fieldX, top, titleSize, 225, 225, 225);
+
+            if (winningTimes.Count == 0)
+            {
+                display.showText("No winning times recorded yet.", fieldX, top + lineHeight, lineSize, 255, 255, 255);
+                return;
+            }
+
+            for (var index = 0; index < winningTimes.Count; index++)
+            {
+                var time = TimeSpan.FromMilliseconds(winningTimes[index].DurationMs);
+                display.showText($"{index + 1}. {formatWinningTime(time)}", fieldX, top + ((index + 1) * lineHeight), lineSize, 255, 255, 255);
+            }
         }
 
         private void drawInputField(Display display, int x, int y, int width, int height, string label, string value, JoinField field, float uiScale)
@@ -375,6 +427,10 @@ namespace Shard
 
             if (menuScreen != MenuScreen.Join)
             {
+                if (menuScreen == MenuScreen.Scoreboard && key == (int)SDL_Scancode.SDL_SCANCODE_ESCAPE)
+                {
+                    backToMainMenu();
+                }
                 return;
             }
 
@@ -665,6 +721,11 @@ namespace Shard
             }
 
             return value.Substring(0, value.Length - 1);
+        }
+
+        private static string formatWinningTime(TimeSpan duration)
+        {
+            return $"{(int)duration.TotalMinutes:00}:{duration.Seconds:00}.{duration.Milliseconds / 10:00}";
         }
 
         private static void drawFilledRect(Display display, int x, int y, int width, int height, Color color)

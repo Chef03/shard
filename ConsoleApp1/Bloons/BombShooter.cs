@@ -37,6 +37,17 @@ namespace Shard.Bloons
             return "Bomb Shooter";
         }
 
+        public override List<ProjectileSnapshot> getProjectileSnapshots()
+        {
+            var snapshots = new List<ProjectileSnapshot>();
+            if (activeProjectile != null && activeProjectile.getActive())
+            {
+                snapshots.Add(activeProjectile.toSnapshot());
+            }
+
+            return snapshots;
+        }
+
         public override void update(List<Bloon> bloons, double deltaMs, LPoint pointerWorldPosition, Player owner)
         {
             if (shotCooldownRemainingMs > 0)
@@ -46,7 +57,7 @@ namespace Shard.Bloons
 
             if (activeProjectile != null)
             {
-                activeProjectile.update(bloons, deltaMs);
+                activeProjectile.update(bloons, deltaMs, owner);
                 if (!activeProjectile.getActive())
                 {
                     activeProjectile = null;
@@ -118,7 +129,7 @@ namespace Shard.Bloons
             return active;
         }
 
-        public void update(List<Bloon> bloons, double deltaMs)
+        public void update(List<Bloon> bloons, double deltaMs, Player owner)
         {
             if (!active)
             {
@@ -136,7 +147,7 @@ namespace Shard.Bloons
             {
                 xPos = targetPosition.x;
                 yPos = targetPosition.y;
-                explode(bloons);
+                explode(bloons, owner);
                 active = false;
                 return;
             }
@@ -168,7 +179,22 @@ namespace Shard.Bloons
             display.drawLine(screenX + 2, screenY - bodyRadius + 1, screenX + 4, screenY - bodyRadius - leafLength + 2, 70, 180, 70, 255);
         }
 
-        private void explode(List<Bloon> bloons)
+        public ProjectileSnapshot toSnapshot()
+        {
+            return new ProjectileSnapshot
+            {
+                X = (float)xPos,
+                Y = (float)yPos,
+                RenderType = ProjectileRenderType.FilledCircle,
+                Size = 5,
+                R = 245,
+                G = 210,
+                B = 70,
+                A = 255,
+            };
+        }
+
+        private void explode(List<Bloon> bloons, Player owner)
         {
             var blastRadiusSq = blastRadius * blastRadius;
             foreach (var bloon in bloons)
@@ -185,7 +211,7 @@ namespace Shard.Bloons
 
                 if (distanceSq <= blastRadiusSq)
                 {
-                    bloon.pop(damage);
+                    bloon.pop(damage, owner);
                 }
             }
         }

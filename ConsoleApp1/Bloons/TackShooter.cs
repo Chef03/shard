@@ -7,6 +7,7 @@ namespace Shard.Bloons
     internal class TackShooter : TowerBase
     {
         private readonly int damage;
+        private readonly double range;
         private readonly double attackCooldownMs;
         private readonly double projectileSpeedPixelsPerSecond;
         private readonly double projectileLifetimeMs;
@@ -15,14 +16,16 @@ namespace Shard.Bloons
 
         public TackShooter(
             LPoint position,
+            double range = 150,
             int damage = 1,
             int cost = 260,
-            double attackSpeedPerSecond = 1.1,
+            double attackSpeedPerSecond = 1.5,
             double projectileSpeedPixelsPerSecond = 980,
-            double projectileLifetimeMs = 520)
+            double projectileLifetimeMs = 200)
             : base(position, cost)
         {
             this.damage = damage;
+            this.range = range;
             this.attackCooldownMs = 1000.0 / attackSpeedPerSecond;
             this.projectileSpeedPixelsPerSecond = projectileSpeedPixelsPerSecond;
             this.projectileLifetimeMs = projectileLifetimeMs;
@@ -35,7 +38,23 @@ namespace Shard.Bloons
             return "Tack Shooter";
         }
 
-        public override void update(List<Bloon> bloons, double deltaMs, LPoint pointerWorldPosition, Player player)
+        public override List<ProjectileSnapshot> getProjectileSnapshots()
+        {
+            var snapshots = new List<ProjectileSnapshot>(activeProjectiles.Count);
+            foreach (var projectile in activeProjectiles)
+            {
+                if (!projectile.getActive())
+                {
+                    continue;
+                }
+
+                snapshots.Add(projectile.toSnapshot());
+            }
+
+            return snapshots;
+        }
+
+        public override void update(List<Bloon> bloons, double deltaMs, LPoint pointerWorldPosition, Player owner)
         {
             if (shotCooldownRemainingMs > 0)
             {
@@ -44,14 +63,14 @@ namespace Shard.Bloons
 
             for (int i = activeProjectiles.Count - 1; i >= 0; i--)
             {
-                activeProjectiles[i].update(bloons, deltaMs);
+                activeProjectiles[i].update(bloons, deltaMs, owner);
                 if (!activeProjectiles[i].getActive())
                 {
                     activeProjectiles.RemoveAt(i);
                 }
             }
 
-            while (shotCooldownRemainingMs <= 0)
+            while (shotCooldownRemainingMs <= 0 && getClosestTargetInRange(position, bloons, range) != null)
             {
                 spawnRadialTacks();
                 shotCooldownRemainingMs += attackCooldownMs;
@@ -171,7 +190,7 @@ namespace Shard.Bloons
             return active;
         }
 
-        public void update(List<Bloon> bloons, double deltaMs)
+        public void update(List<Bloon> bloons, double deltaMs, Player owner)
         {
             if (!active)
             {
@@ -206,7 +225,7 @@ namespace Shard.Bloons
                     continue;
                 }
 
-                bloon.pop(damage);
+                bloon.pop(damage, owner);
                 active = false;
                 break;
             }
@@ -225,6 +244,21 @@ namespace Shard.Bloons
 
             display.drawLine(screenX - tipLength, screenY, screenX + tipLength, screenY, 25, 25, 25, 255);
             display.drawLine(screenX, screenY - tipLength, screenX, screenY + tipLength, 25, 25, 25, 255);
+        }
+
+        public ProjectileSnapshot toSnapshot()
+        {
+            return new ProjectileSnapshot
+            {
+                X = (float)xPos,
+                Y = (float)yPos,
+                RenderType = ProjectileRenderType.Cross,
+                Size = 5,
+                R = 25,
+                G = 25,
+                B = 25,
+                A = 255,
+            };
         }
     }
 }

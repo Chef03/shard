@@ -18,7 +18,34 @@ namespace Shard.Bloons
             return cost;
         }
 
+        public LPoint getPosition()
+        {
+            return position;
+        }
+
         public abstract string getName();
+        public virtual List<ProjectileSnapshot> getProjectileSnapshots()
+        {
+            return new List<ProjectileSnapshot>();
+        }
+
+        public virtual TowerSnapshot createSnapshot(int ownerId)
+        {
+            return new TowerSnapshot
+            {
+                TowerType = GetType().Name,
+                X = position.x,
+                Y = position.y,
+                OwnerId = ownerId,
+                AimDirectionX = 0,
+                AimDirectionY = 0,
+            };
+        }
+
+        public virtual void applySnapshot(TowerSnapshot snapshot)
+        {
+        }
+
         public abstract void update(List<Bloon> bloons, double deltaMs, LPoint pointerWorldPosition, Player owner);
         public abstract void draw(Display display, float worldScale = 1.0f, float worldOffsetX = 0.0f, float worldOffsetY = 0.0f);
 
@@ -64,6 +91,36 @@ namespace Shard.Bloons
             }
 
             return closest;
+        }
+        protected static Bloon getFurthestTargetInRange(LPoint sourcePosition, List<Bloon> bloons, double range)
+        {
+            Bloon furthest = null;
+            var furthestProgress = -1f;
+            var rangeSq = range * range;
+
+            foreach (var bloon in bloons)
+            {
+                if (!bloon.getIsTargetable())
+                    continue;
+
+                var targetPosition = bloon.getPosition();
+                var dx = targetPosition.x - sourcePosition.x;
+                var dy = targetPosition.y - sourcePosition.y;
+                var distanceSq = (dx * dx) + (dy * dy);
+
+                if (distanceSq > rangeSq)
+                    continue;
+
+                // Compare by path index first, then fractional progress as tiebreaker
+                var bloonProgress = (bloon.getNextPointIndex() * 1000) + (bloon.getProgress() * 1000);
+                if (bloonProgress <= furthestProgress)
+                    continue;
+
+                furthestProgress = bloonProgress;
+                furthest = bloon;
+            }
+
+            return furthest;
         }
     }
 }
