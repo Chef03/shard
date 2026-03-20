@@ -360,7 +360,10 @@ namespace Shard
             var titleSize = scaledValue(18, uiScale, minimum: 10);
             var lineSize = scaledValue(22, uiScale, minimum: 12);
             var lineHeight = scaledValue(34, uiScale, minimum: 18);
-            var winningTimes = Bootstrap.getScoreManager().GetWinningTimes(ScoreboardKey, 12);
+            var winningTimes = Bootstrap.getScoreManager().GetWinningTimes(
+                ScoreboardKey,
+                static entry => entry.DurationMs,
+                12);
 
             display.showText("Fastest Bloons wins", fieldX, top, titleSize, 225, 225, 225);
 

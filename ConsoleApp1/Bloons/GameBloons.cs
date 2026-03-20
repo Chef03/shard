@@ -161,6 +161,7 @@ class GameBloons : Game, InputListener
     {
         if (showEndScreen)
         {
+            stopBackgroundMusic();
             Network.pollClient();
             drawEndScreen();
             return;
@@ -395,10 +396,8 @@ class GameBloons : Game, InputListener
         
         unsafe
         {
-             var track = Bootstrap.getSound().playSound("Sunshine Serenade.mp3", true, 10, 10);
+             track = Bootstrap.getSound().playSound("Sunshine Serenade.mp3", true, 10, 10);
              Bootstrap.getSound().setVolumePercent(track, soundManager.getVolumePercent());
-             Console.WriteLine("Track: " + track->ToString());
-             this.track = track;
         }
         
         background = new GameObject();
@@ -1307,12 +1306,24 @@ class GameBloons : Game, InputListener
 
     private void returnToMainMenu()
     {
+        stopBackgroundMusic();
         Network.reset();
         Network.OnTowerPlaceRequested -= OnClientTowerPlaceRequested;
         Network.OnPlayerAimUpdated -= OnClientAimUpdated;
         Network.OnStateReceived -= ApplyStateFromHost;
         Bootstrap.getInput().removeListener(this);
         Bootstrap.setRunningGame(new GameMainMenu());
+    }
+
+    private unsafe void stopBackgroundMusic()
+    {
+        if (track == null)
+        {
+            return;
+        }
+
+        Bootstrap.getSound().stopSound(track);
+        track = null;
     }
 
     private void drawWaitingScreen()

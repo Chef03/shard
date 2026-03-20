@@ -43,8 +43,24 @@ namespace Shard
 
         public override unsafe void pan(MIX_Track* track, float left, float right)
         {
+            if (track == null)
+            {
+                return;
+            }
+
             var gains = new MIX_StereoGains { left = left, right = right };
             SDL3_mixer.MIX_SetTrackStereo(track, &gains);
+        }
+
+        public override unsafe void stopSound(MIX_Track* track)
+        {
+            if (track == null)
+            {
+                return;
+            }
+
+            SDL3_mixer.MIX_StopTrack(track, 0);
+            SDL3_mixer.MIX_DestroyTrack(track);
         }
 
         public override unsafe MIX_Track* playSound(string file, bool loop = false, float left = 0, float right = 0, int volume = 1)
@@ -68,7 +84,6 @@ namespace Shard
             fixed (byte* pathPtr = System.Text.Encoding.UTF8.GetBytes(file + "\0"))
             {
                 var track = this.playTrack(pathPtr, loop, left, right, volume);
-                Console.WriteLine("Track: " + track->ToString());
                 return track;
             }
         }

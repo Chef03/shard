@@ -50,6 +50,15 @@ public class ScoreManager
 
     public IReadOnlyList<WinningTimeEntry> GetWinningTimes(ScoreBoardKey board, int limit = 10)
     {
+        return GetWinningTimes(board, static entry => entry.DurationMs, limit);
+    }
+
+    public IReadOnlyList<WinningTimeEntry> GetWinningTimes<TKey>(
+        ScoreBoardKey board,
+        Func<WinningTimeEntry, TKey> sortKeySelector,
+        int limit = 10,
+        IComparer<TKey> sortKeyComparer = null)
+    {
         lock (syncRoot)
         {
             EnsureLoaded();
@@ -58,9 +67,16 @@ public class ScoreManager
                 return Array.Empty<WinningTimeEntry>();
             }
 
+            if (sortKeySelector == null)
+            {
+                throw new ArgumentNullException(nameof(sortKeySelector));
+            }
+
+            var comparer = sortKeyComparer ?? Comparer<TKey>.Default;
+
             return winningTimes
                 .Where(entry => entry.BoardKey == board)
-                .OrderBy(entry => entry.DurationMs)
+                .OrderBy(sortKeySelector, comparer)
                 .ThenBy(entry => entry.RecordedAtUtc)
                 .Take(limit)
                 .ToList();
